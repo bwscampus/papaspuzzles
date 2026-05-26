@@ -48,10 +48,16 @@ export default function Home() {
                             Start a Trade <ArrowRight className="w-5 h-5" />
                         </Link>
                         <Link
-                            href="/explore"
+                            href="/donate"
+                            className="inline-flex items-center gap-3 px-8 py-4 bg-white text-primary rounded-full text-lg font-bold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-xl"
+                        >
+                            Donate Now
+                        </Link>
+                        <Link
+                            href="/redeem"
                             className="inline-flex items-center gap-3 px-8 py-4 bg-white/10 text-white border border-white/30 rounded-full text-lg font-bold hover:bg-white/20 transition-all"
                         >
-                            Explore Collection
+                            Use My Credits
                         </Link>
                     </div>
                 </div>

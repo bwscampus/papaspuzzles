@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Lock, Package, Search, Check, Trash2, Edit } from "lucide-react";
-import type { Donation, TradeRecord, PuzzleRequest } from "@/types/puzzle";
+import { Lock, Package, Search, Check, Trash2, Edit, Coins } from "lucide-react";
+import type { Donation, TradeRecord, PuzzleRequest, RedemptionRecord } from "@/types/puzzle";
 import { DEFAULT_THEME, FALLBACK_THEME } from "@/lib/puzzleConstants";
 
 const normalizeThemeValue = (value: string) => {
@@ -26,6 +26,7 @@ export default function AdminPage() {
     const [donations, setDonations] = useState<Donation[]>([]);
     const [requests, setRequests] = useState<PuzzleRequest[]>([]);
     const [trades, setTrades] = useState<TradeRecord[]>([]);
+    const [redemptions, setRedemptions] = useState<RedemptionRecord[]>([]);
     const [themeOptions, setThemeOptions] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -73,19 +74,22 @@ export default function AdminPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [donationsRes, requestsRes, tradesRes] = await Promise.all([
+            const [donationsRes, requestsRes, tradesRes, redemptionsRes] = await Promise.all([
                 fetch("/api/admin/donations", { cache: "no-store" }),
                 fetch("/api/admin/requests", { cache: "no-store" }),
                 fetch("/api/admin/trades", { cache: "no-store" }),
+                fetch("/api/redeem", { cache: "no-store" }),
             ]);
 
             const donationsData = await donationsRes.json();
             const requestsData = await requestsRes.json();
             const tradesData = await tradesRes.json();
+            const redemptionsData = await redemptionsRes.json();
 
             setDonations(donationsData.data || []);
             setRequests(requestsData.data || []);
             setTrades(tradesData.data || []);
+            setRedemptions(redemptionsData.data || []);
             await fetchThemes();
         } catch (err) {
             console.error("Failed to fetch data", err);
@@ -132,6 +136,39 @@ export default function AdminPage() {
             else alert("Failed to publish donation");
         } catch (err) {
             console.error("Failed to publish", err);
+        }
+    };
+
+    const handleAcceptBatch = async (batchId: string, donorEmail: string, donorUid?: string) => {
+        try {
+            const res = await fetch("/api/admin/donations/accept-batch", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ batchId, donorEmail, donorUid }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(`Accepted ${data.puzzlesPublished} puzzle(s). ${data.creditsAwarded} credit(s) awarded to donor.`);
+                fetchData();
+            } else {
+                alert("Failed to accept batch: " + data.error);
+            }
+        } catch (err) {
+            console.error("Failed to accept batch", err);
+        }
+    };
+
+    const handleFulfillRedemption = async (id: string) => {
+        try {
+            const res = await fetch(`/api/admin/redemptions/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "fulfilled" }),
+            });
+            if (res.ok) fetchData();
+            else alert("Failed to update redemption");
+        } catch (err) {
+            console.error("Failed to fulfill redemption", err);
         }
     };
 
@@ -301,6 +338,15 @@ export default function AdminPage() {
     const pendingRequestsCount = requests.filter(r => r.status !== 'confirmed').length;
     const pendingDonations = donations.filter(d => d.status === 'pending_admin_review');
     const pendingTradesCount = trades.filter(t => t.status !== 'completed').length;
+    const pendingRedemptionsCount = redemptions.filter(r => r.status !== 'fulfilled').length;
+
+    // Group pending donations by batch_id
+    const donationBatches: Map<string, Donation[]> = new Map();
+    for (const d of pendingDonations) {
+        const key = d.batch_id || d.id; // fallback: each single donation is its own "batch"
+        if (!donationBatches.has(key)) donationBatches.set(key, []);
+        donationBatches.get(key)!.push(d);
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -381,6 +427,21 @@ export default function AdminPage() {
                         {pendingTradesCount > 0 && (
                             <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm animate-pulse">
                                 {pendingTradesCount}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab("redemptions"); resetForm(); }}
+                        className={`relative flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${activeTab === "redemptions"
+                            ? "bg-purple-600 text-white shadow-md"
+                            : "bg-white text-gray-600 hover:bg-gray-100"
+                            }`}
+                    >
+                        <Coins className="w-5 h-5" />
+                        Redemptions ({redemptions.length})
+                        {pendingRedemptionsCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm animate-pulse">
+                                {pendingRedemptionsCount}
                             </span>
                         )}
                     </button>
@@ -615,49 +676,133 @@ export default function AdminPage() {
                         )}
 
                         {activeTab === "pending-donations" && (
+                            <div className="p-6 space-y-6">
+                                {donationBatches.size === 0 && (
+                                    <p className="text-center py-12 text-gray-400">No pending donations.</p>
+                                )}
+                                {Array.from(donationBatches.entries()).map(([batchKey, batchPuzzles]) => {
+                                    const donor = batchPuzzles[0];
+                                    const isBatch = !!donor.batch_id;
+                                    const count = batchPuzzles.length;
+                                    const creditsPreview = Math.max(0, count - 1); // shown as first-time estimate
+                                    return (
+                                        <div key={batchKey} className="border border-gray-200 rounded-xl overflow-hidden">
+                                            {/* Batch header */}
+                                            <div className="bg-gray-50 px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+                                                <div>
+                                                    <p className="font-semibold text-gray-800">
+                                                        {count} puzzle{count !== 1 ? "s" : ""} from{" "}
+                                                        <span className="text-primary">{donor.email}</span>
+                                                    </p>
+                                                    <p className="text-xs text-gray-400 mt-0.5">
+                                                        Submitted {new Date(donor.created_at).toLocaleDateString()}
+                                                        {isBatch ? ` · Batch ID: ${batchKey.slice(0, 8)}…` : ""}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-sm text-gray-500">
+                                                        ~{creditsPreview} credit{creditsPreview !== 1 ? "s" : ""} (first-time) or {count} (repeat)
+                                                    </span>
+                                                    {isBatch ? (
+                                                        <button
+                                                            onClick={() => handleAcceptBatch(donor.batch_id!, donor.email, donor.uid)}
+                                                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-bold flex items-center gap-1 shadow-sm transition-colors"
+                                                        >
+                                                            <Check className="w-3 h-3" /> Accept All {count}
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handlePublishDonation(donor.id)}
+                                                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-bold flex items-center gap-1 shadow-sm transition-colors"
+                                                        >
+                                                            <Check className="w-3 h-3" /> Publish
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {/* Puzzles in this batch */}
+                                            <table className="w-full text-left">
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {batchPuzzles.map((d) => (
+                                                        <tr key={d.id} className="hover:bg-gray-50">
+                                                            <td className="px-6 py-3 w-20">
+                                                                {d.image_url ? (
+                                                                    <img src={d.image_url} alt={d.name} className="w-14 h-14 object-cover rounded-lg" />
+                                                                ) : (
+                                                                    <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300">
+                                                                        <Package className="w-5 h-5" />
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-6 py-3 font-medium">{d.name}</td>
+                                                            <td className="px-6 py-3 text-gray-500 text-sm">{d.pieces ? `${d.pieces} pcs` : "—"}</td>
+                                                            <td className="px-6 py-3 text-gray-500 text-sm capitalize">{d.condition}</td>
+                                                            <td className="px-6 py-3 text-gray-500 text-sm capitalize">{d.difficulty}</td>
+                                                            <td className="px-6 py-3">
+                                                                <button
+                                                                    onClick={() => handleDelete(d.id)}
+                                                                    className="text-red-400 hover:text-red-600 p-1 hover:bg-red-50 rounded"
+                                                                    title="Remove this puzzle"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {activeTab === "redemptions" && (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead className="bg-gray-50 border-b border-gray-100">
                                         <tr>
-                                            <th className="px-6 py-4 font-semibold text-gray-600">Photo</th>
-                                            <th className="px-6 py-4 font-semibold text-gray-600">Name</th>
-                                            <th className="px-6 py-4 font-semibold text-gray-600">Pieces</th>
-                                            <th className="px-6 py-4 font-semibold text-gray-600">Condition</th>
-                                            <th className="px-6 py-4 font-semibold text-gray-600">Donor Email</th>
+                                            <th className="px-6 py-4 font-semibold text-gray-600">User</th>
+                                            <th className="px-6 py-4 font-semibold text-gray-600">Puzzles Requested</th>
+                                            <th className="px-6 py-4 font-semibold text-gray-600">Credits Spent</th>
+                                            <th className="px-6 py-4 font-semibold text-gray-600">Date</th>
+                                            <th className="px-6 py-4 font-semibold text-gray-600">Status</th>
                                             <th className="px-6 py-4 font-semibold text-gray-600">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {pendingDonations.map((d) => (
-                                            <tr key={d.id} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4">
-                                                    {d.image_url ? (
-                                                        <img src={d.image_url} alt={d.name} className="w-16 h-16 object-cover rounded-lg" />
-                                                    ) : (
-                                                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300">
-                                                            <Package className="w-6 h-6" />
-                                                        </div>
-                                                    )}
+                                        {redemptions.map((r) => (
+                                            <tr key={r.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4 text-gray-600">{r.user_email}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-500">
+                                                    {r.donation_names?.join(", ") || `${r.donation_ids?.length} puzzle(s)`}
                                                 </td>
-                                                <td className="px-6 py-4 font-medium">{d.name}</td>
-                                                <td className="px-6 py-4 text-gray-500">{d.pieces}</td>
-                                                <td className="px-6 py-4 text-gray-500 capitalize">{d.condition}</td>
-                                                <td className="px-6 py-4 text-gray-500">{d.email}</td>
                                                 <td className="px-6 py-4">
-                                                    <button
-                                                        onClick={() => handlePublishDonation(d.id)}
-                                                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium flex items-center gap-1 shadow-sm transition-colors"
-                                                    >
-                                                        <Check className="w-3 h-3" /> Publish
-                                                    </button>
+                                                    <span className="flex items-center gap-1 text-purple-700 font-semibold">
+                                                        <Coins className="w-4 h-4" /> {r.credits_spent}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-400 text-sm">{new Date(r.created_at).toLocaleDateString()}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${r.status === "fulfilled" ? "bg-green-100 text-green-700" : "bg-purple-100 text-purple-700"}`}>
+                                                        {r.status === "fulfilled" ? "Fulfilled" : "Pending Pickup"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {r.status !== "fulfilled" && (
+                                                        <button
+                                                            onClick={() => handleFulfillRedemption(r.id)}
+                                                            className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm font-medium flex items-center gap-1 shadow-sm transition-colors"
+                                                        >
+                                                            <Check className="w-3 h-3" /> Mark Fulfilled
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
-                                        {pendingDonations.length === 0 && (
+                                        {redemptions.length === 0 && (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
-                                                    No pending donations.
-                                                </td>
+                                                <td colSpan={6} className="px-6 py-12 text-center text-gray-400">No redemptions yet.</td>
                                             </tr>
                                         )}
                                     </tbody>

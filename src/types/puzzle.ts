@@ -7,9 +7,22 @@ export interface Donation {
     condition: 'new' | 'good' | 'fair';
     email: string;
     image_url: string | null;
-    status: 'available' | 'pending_admin_review' | 'traded';
+    status: 'available' | 'pending_admin_review' | 'traded' | 'claimed';
     created_at: string;
     uid?: string;
+    batch_id?: string;
+    source?: 'user_donation' | 'trade' | 'admin';
+}
+
+export interface RedemptionRecord {
+    id: string;
+    uid: string;
+    user_email: string;
+    donation_ids: string[];
+    donation_names: string[];
+    credits_spent: number;
+    status: 'pending_pickup' | 'fulfilled';
+    created_at: string;
 }
 
 export interface TradeRecord {
