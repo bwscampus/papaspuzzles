@@ -1,8 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
 
 /** Normalized user shape used throughout the app. */
 export interface AppUser {
@@ -30,22 +28,17 @@ const AuthContext = createContext<AuthContextType>({
     resetPassword: async () => {},
 });
 
-function toAppUser(user: SupabaseUser | null | undefined): AppUser | null {
-    if (!user) return null;
-    const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-    const displayName =
-        (typeof meta.full_name === "string" && meta.full_name) ||
-        (typeof meta.name === "string" && meta.name) ||
-        null;
-    const photoURL = typeof meta.avatar_url === "string" ? meta.avatar_url : null;
-    return { uid: user.id, email: user.email ?? null, displayName, photoURL };
-}
-
-function requireAuth() {
-    if (!supabase) {
-        throw new Error("Authentication is not configured.");
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+    const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        throw new Error(data.error || "Something went wrong. Please try again.");
     }
-    return supabase.auth;
+    return data as T;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -53,62 +46,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!supabase) {
-            setLoading(false);
-            return;
-        }
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            const appUser = toAppUser(session?.user);
-            setUser(appUser);
-            setLoading(false);
-
-            if (appUser && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
-                try {
-                    await fetch("/api/users", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            uid: appUser.uid,
-                            email: appUser.email,
-                            displayName: appUser.displayName,
-                        }),
-                    });
-                } catch (err) {
-                    console.error("Failed to sync user:", err);
-                }
-            }
-        });
-
-        return () => subscription.unsubscribe();
+        let cancelled = false;
+        fetch("/api/auth/me", { cache: "no-store" })
+            .then((res) => res.json())
+            .then((data) => {
+                if (!cancelled) setUser(data.user ?? null);
+            })
+            .catch(() => {
+                if (!cancelled) setUser(null);
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     const signIn = async (email: string, password: string) => {
-        const { error } = await requireAuth().signInWithPassword({ email, password });
-        if (error) throw error;
+        const { user } = await postJson<{ user: AppUser }>("/api/auth/signin", { email, password });
+        setUser(user);
     };
 
     const signUp = async (email: string, password: string) => {
-        const { data, error } = await requireAuth().signUp({ email, password });
-        if (error) throw error;
-        // Supabase returns a user with no identities when the email is already registered.
-        if (data.user && data.user.identities?.length === 0) {
-            throw Object.assign(new Error("User already registered"), { code: "user_already_exists" });
-        }
-        if (data.user && !data.session) {
-            throw new Error("Check your email to confirm your account, then sign in.");
-        }
+        const { user } = await postJson<{ user: AppUser }>("/api/auth/signup", { email, password });
+        setUser(user);
     };
 
     const signOut = async () => {
-        const { error } = await requireAuth().signOut();
-        if (error) throw error;
+        await postJson("/api/auth/signout", {});
+        setUser(null);
     };
 
     const resetPassword = async (email: string) => {
-        const redirectTo = `${window.location.origin}/reset-password`;
-        const { error } = await requireAuth().resetPasswordForEmail(email, { redirectTo });
-        if (error) throw error;
+        await postJson("/api/auth/forgot-password", { email });
     };
 
     return (

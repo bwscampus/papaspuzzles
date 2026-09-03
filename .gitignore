@@ -39,3 +39,4 @@ server/test_image.jpg
 server/uploads/
 .env*
 !.env*.example
+uploads/

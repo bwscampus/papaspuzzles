@@ -1,16 +1,11 @@
 import { NextResponse } from 'next/server';
 import convert from 'heic-convert';
-import { supabaseAdmin, PUZZLE_BUCKET } from '@/lib/supabaseAdmin';
+import { saveUpload } from '@/lib/storage';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
     'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif',
 ]);
-
-function safeFileName(name: string): string {
-    const base = name.split(/[\\/]/).pop() ?? 'upload';
-    return base.replace(/[^A-Za-z0-9._-]/g, '_').slice(-100);
-}
 
 export async function POST(request: Request) {
     try {
@@ -32,11 +27,10 @@ export async function POST(request: Request) {
         }
 
         let buffer: Buffer = Buffer.from(await file.arrayBuffer());
-        let mimeType = file.type;
         let fileName = file.name;
 
         // HEIC conversion
-        if (isHeic || mimeType === 'image/heic') {
+        if (isHeic || file.type === 'image/heic') {
             try {
                 const converted = await convert({
                     buffer: buffer,
@@ -44,7 +38,6 @@ export async function POST(request: Request) {
                     quality: 0.8
                 });
                 buffer = Buffer.from(new Uint8Array(converted));
-                mimeType = 'image/jpeg';
                 fileName = fileName.replace(/\.hei[cf]$/i, '.jpg');
             } catch (convError) {
                 console.error('HEIC conversion failed:', convError);
@@ -52,18 +45,9 @@ export async function POST(request: Request) {
             }
         }
 
-        const storage = supabaseAdmin().storage.from(PUZZLE_BUCKET);
-        const path = `${Date.now()}-${safeFileName(fileName)}`;
+        const imageUrl = await saveUpload(buffer, fileName);
 
-        const { error } = await storage.upload(path, buffer, {
-            contentType: mimeType,
-            upsert: false,
-        });
-        if (error) throw error;
-
-        const { data: { publicUrl } } = storage.getPublicUrl(path);
-
-        return NextResponse.json({ imageUrl: publicUrl });
+        return NextResponse.json({ imageUrl });
     } catch (error: unknown) {
         console.error('Upload error:', error);
         return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });

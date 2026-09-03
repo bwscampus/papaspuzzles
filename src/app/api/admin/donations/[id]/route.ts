@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
+import { query, errorResponse, toPieces } from '@/lib/db';
 import { requireAdminSession } from '@/lib/adminAuth';
 
 export async function DELETE(
@@ -11,10 +11,7 @@ export async function DELETE(
 
     try {
         const { id } = await params;
-
-        const { error } = await supabaseAdmin().from('donations').delete().eq('id', id);
-        if (error) throw error;
-
+        await query('delete from donations where id = $1', [id]);
         return NextResponse.json({ message: 'success' });
     } catch (error: unknown) {
         return errorResponse(error);
@@ -34,25 +31,23 @@ export async function PATCH(
         const { id } = await params;
         const body = await request.json();
 
-        const update: Record<string, unknown> = {};
+        const sets: string[] = [];
+        const values: unknown[] = [];
         for (const field of EDITABLE_FIELDS) {
             if (!(field in body)) continue;
-            const value = body[field];
-            if (field === 'pieces') {
-                update.pieces = value === '' || value === null || value === undefined ? null : Number(value);
-            } else if (field === 'theme' && typeof value === 'string') {
-                update.theme = value.trim();
-            } else {
-                update[field] = value;
-            }
+            let value: unknown = body[field];
+            if (field === 'pieces') value = toPieces(value);
+            else if (field === 'theme' && typeof value === 'string') value = value.trim();
+            values.push(value);
+            sets.push(`${field} = $${values.length}`);
         }
 
-        if (Object.keys(update).length === 0) {
+        if (sets.length === 0) {
             return NextResponse.json({ error: 'No editable fields provided' }, { status: 400 });
         }
 
-        const { error } = await supabaseAdmin().from('donations').update(update).eq('id', id);
-        if (error) throw error;
+        values.push(id);
+        await query(`update donations set ${sets.join(', ')} where id = $${values.length}`, values);
 
         return NextResponse.json({ message: 'success' });
     } catch (error: unknown) {

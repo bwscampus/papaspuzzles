@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
+import { queryOne, errorResponse } from '@/lib/db';
 import { validateString, validateEmail } from '@/lib/validate';
 
 export async function POST(request: Request) {
@@ -16,18 +16,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: e instanceof Error ? e.message : 'Validation error' }, { status: 400 });
         }
 
-        const { data, error } = await supabaseAdmin()
-            .from('requests')
-            .insert({
-                type,
-                pieces,
-                difficulty: difficulty ?? null,
-                email,
-                status: 'pending',
-            })
-            .select()
-            .single();
-        if (error) throw error;
+        const data = await queryOne(
+            `insert into requests (type, pieces, difficulty, email, status)
+             values ($1, $2, $3, $4, 'pending')
+             returning *`,
+            [type, pieces, difficulty ?? null, email]
+        );
 
         return NextResponse.json({ message: 'success', data });
     } catch (error: unknown) {

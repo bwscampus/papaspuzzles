@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
+import { query, errorResponse } from '@/lib/db';
 import { requireAdminSession } from '@/lib/adminAuth';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -14,8 +14,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
         }
 
-        const { error } = await supabaseAdmin().from('redemptions').update({ status }).eq('id', id);
-        if (error) throw error;
+        await query('update redemptions set status = $1 where id = $2', [status, id]);
 
         return NextResponse.json({ message: 'success' });
     } catch (error: unknown) {

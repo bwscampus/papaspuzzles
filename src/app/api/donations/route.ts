@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
+import { queryOne, withTransaction, errorResponse, toPieces } from '@/lib/db';
+import { getSessionUid } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,53 +13,47 @@ interface PuzzleInput {
     image_url?: string | null;
 }
 
-function toPieces(value: unknown): number | null {
-    if (value === '' || value === null || value === undefined) return null;
-    const n = Number(value);
-    return Number.isFinite(n) ? n : null;
-}
-
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const db = supabaseAdmin();
+        // The signed-in user (if any) is taken from the session cookie, never from the request body.
+        const uid = await getSessionUid();
 
         // Batch submission from the new donate form
         if (Array.isArray(body.puzzles)) {
-            const { email, uid, puzzles } = body as {
-                email: string;
-                uid?: string;
-                puzzles: PuzzleInput[];
-            };
+            const { email, puzzles } = body as { email: string; puzzles: PuzzleInput[] };
 
             if (!email || !puzzles.length) {
                 return NextResponse.json({ error: 'Email and at least one puzzle are required' }, { status: 400 });
             }
-
-            const batchId = crypto.randomUUID();
-            const rows = [];
-
             for (const puzzle of puzzles) {
                 if (!puzzle.name?.trim()) {
                     return NextResponse.json({ error: 'Each puzzle must have a name' }, { status: 400 });
                 }
-                rows.push({
-                    name: puzzle.name.trim(),
-                    pieces: toPieces(puzzle.pieces),
-                    difficulty: puzzle.difficulty || 'medium',
-                    theme: puzzle.theme?.trim() || '',
-                    condition: puzzle.condition || 'good',
-                    image_url: puzzle.image_url || null,
-                    email,
-                    uid: uid || null,
-                    status: 'pending_admin_review',
-                    batch_id: batchId,
-                    source: 'user_donation',
-                });
             }
 
-            const { error } = await db.from('donations').insert(rows);
-            if (error) throw error;
+            const batchId = crypto.randomUUID();
+
+            await withTransaction(async (client) => {
+                for (const puzzle of puzzles) {
+                    await client.query(
+                        `insert into donations
+                            (name, pieces, difficulty, theme, condition, image_url, email, uid, status, batch_id, source)
+                         values ($1, $2, $3, $4, $5, $6, $7, $8, 'pending_admin_review', $9, 'user_donation')`,
+                        [
+                            puzzle.name.trim(),
+                            toPieces(puzzle.pieces),
+                            puzzle.difficulty || 'medium',
+                            puzzle.theme?.trim() || '',
+                            puzzle.condition || 'good',
+                            puzzle.image_url || null,
+                            email,
+                            uid,
+                            batchId,
+                        ]
+                    );
+                }
+            });
 
             return NextResponse.json({ message: 'success', batchId });
         }
@@ -69,25 +64,17 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
         }
 
-        const { data, error } = await db
-            .from('donations')
-            .insert({
-                name: name.trim(),
-                pieces: toPieces(pieces),
-                difficulty: difficulty || 'medium',
-                theme: theme?.trim() || '',
-                condition: condition || 'good',
-                email,
-                status: 'pending_admin_review',
-                source: 'user_donation',
-            })
-            .select('id')
-            .single();
-        if (error) throw error;
+        const row = await queryOne<{ id: string }>(
+            `insert into donations (name, pieces, difficulty, theme, condition, email, uid, status, source)
+             values ($1, $2, $3, $4, $5, $6, $7, 'pending_admin_review', 'user_donation')
+             returning id`,
+            [name.trim(), toPieces(pieces), difficulty || 'medium', theme?.trim() || '', condition || 'good', email, uid]
+        );
 
-        return NextResponse.json({ message: 'success', id: data.id });
+        return NextResponse.json({ message: 'success', id: row?.id });
     } catch (error: unknown) {
         console.error('Donation error:', error);
         return errorResponse(error, 500);
     }
 }
+

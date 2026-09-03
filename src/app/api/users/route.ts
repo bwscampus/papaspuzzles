@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
+import { queryOne, errorResponse } from '@/lib/db';
+import { getSessionUid } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,65 +29,51 @@ function toResponse(row: UserRow) {
     };
 }
 
+/** Returns the signed-in user's profile. The `uid` query param is accepted for compatibility but must match the session. */
 export async function GET(request: Request) {
     try {
-        const { searchParams } = new URL(request.url);
-        const uid = searchParams.get('uid');
-
+        const uid = await getSessionUid();
         if (!uid) {
-            return NextResponse.json({ error: 'uid is required' }, { status: 400 });
+            return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
         }
 
-        const { data, error } = await supabaseAdmin()
-            .from('users')
-            .select('*')
-            .eq('uid', uid)
-            .maybeSingle();
-        if (error) throw error;
+        const requested = new URL(request.url).searchParams.get('uid');
+        if (requested && requested !== uid) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
 
+        const data = await queryOne<UserRow>('select * from users where uid = $1', [uid]);
         if (!data) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        return NextResponse.json({ message: 'success', data: toResponse(data as UserRow) });
+        return NextResponse.json({ message: 'success', data: toResponse(data) });
     } catch (error: unknown) {
         console.error('GET /api/users error:', error);
         return errorResponse(error);
     }
 }
 
+/** Updates the signed-in user's display name. Counters are never touched here. */
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
-        const { uid, email, displayName } = body;
-
+        const uid = await getSessionUid();
         if (!uid) {
-            return NextResponse.json({ error: 'uid is required' }, { status: 400 });
+            return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
         }
 
-        const db = supabaseAdmin();
-        const { data: existing, error: fetchError } = await db
-            .from('users')
-            .select('uid')
-            .eq('uid', uid)
-            .maybeSingle();
-        if (fetchError) throw fetchError;
+        const body = await request.json();
+        const displayName = typeof body.displayName === 'string' ? body.displayName.trim() || null : null;
 
-        const profile = { email: email || null, display_name: displayName || null };
-
-        if (!existing) {
-            const { error } = await db.from('users').insert({ uid, ...profile });
-            if (error) throw error;
-        } else {
-            // Update display info but do not overwrite counters
-            const { error } = await db.from('users').update(profile).eq('uid', uid);
-            if (error) throw error;
+        const data = await queryOne<UserRow>(
+            'update users set display_name = coalesce($1, display_name) where uid = $2 returning *',
+            [displayName, uid]
+        );
+        if (!data) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        const { data, error } = await db.from('users').select('*').eq('uid', uid).single();
-        if (error) throw error;
-
-        return NextResponse.json({ message: 'success', data: toResponse(data as UserRow) });
+        return NextResponse.json({ message: 'success', data: toResponse(data) });
     } catch (error: unknown) {
         console.error('POST /api/users error:', error);
         return errorResponse(error);

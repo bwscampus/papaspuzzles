@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
+import { queryOne, errorResponse } from '@/lib/db';
 import { requireAdminSession } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
@@ -16,14 +16,12 @@ export async function POST(request: Request) {
         }
 
         // Publishes all pending puzzles in the batch and awards credits in one transaction.
-        const { data, error } = await supabaseAdmin().rpc('accept_donation_batch', {
-            p_batch_id: batchId,
-            p_uid: donorUid || null,
-            p_email: donorEmail || null,
-        });
-        if (error) throw error;
+        const row = await queryOne<{ result: Record<string, unknown> }>(
+            'select accept_donation_batch($1, $2, $3) as result',
+            [batchId, donorUid || null, donorEmail || null]
+        );
 
-        return NextResponse.json({ message: 'success', ...(data as object) });
+        return NextResponse.json({ message: 'success', ...(row?.result ?? {}) });
     } catch (error: unknown) {
         console.error('Accept batch error:', error);
         return errorResponse(error, 500);

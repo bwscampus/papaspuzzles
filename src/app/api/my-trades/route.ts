@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
+import { query, errorResponse } from '@/lib/db';
+import { getSessionUser } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,39 +13,38 @@ interface TradeRow {
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const email = searchParams.get('email');
+
+    // Signed-in users always see their own trades; the email param is only honoured when signed out.
+    const sessionUser = await getSessionUser();
+    const email = sessionUser?.email ?? searchParams.get('email');
 
     if (!email) {
         return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
     try {
-        const db = supabaseAdmin();
-        const { data: trades, error } = await db
-            .from('trades')
-            .select('*')
-            .eq('user_email', email)
-            .order('created_at', { ascending: false });
-        if (error) throw error;
+        const trades = await query<TradeRow>(
+            'select * from trades where lower(user_email) = lower($1) order by created_at desc',
+            [email]
+        );
 
-        // Resolve related donations in one query (SQL join equivalent of the old NoSQL lookups).
+        // Resolve related donations in one query.
         const ids = new Set<string>();
-        for (const t of trades as TradeRow[]) {
+        for (const t of trades) {
             for (const id of t.given_donation_ids ?? []) ids.add(id);
             if (t.received_donation_id) ids.add(t.received_donation_id);
         }
 
         const donations = new Map<string, { name: string; image_url: string | null }>();
         if (ids.size > 0) {
-            const { data, error: donationError } = await db
-                .from('donations')
-                .select('id, name, image_url')
-                .in('id', Array.from(ids));
-            if (donationError) throw donationError;
-            for (const d of data ?? []) donations.set(d.id, { name: d.name ?? '', image_url: d.image_url ?? null });
+            const rows = await query<{ id: string; name: string | null; image_url: string | null }>(
+                'select id, name, image_url from donations where id = any($1::uuid[])',
+                [Array.from(ids)]
+            );
+            for (const d of rows) donations.set(d.id, { name: d.name ?? '', image_url: d.image_url ?? null });
         }
 
-        const formattedData = (trades as TradeRow[]).map((trade) => {
+        const formattedData = trades.map((trade) => {
             const givenNames = (trade.given_donation_ids ?? [])
                 .map((id) => donations.get(id)?.name)
                 .filter((name): name is string => !!name);

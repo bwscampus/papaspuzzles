@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
+import { query, errorResponse } from '@/lib/db';
 import { requireAdminSession } from '@/lib/adminAuth';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -7,12 +7,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (authError) return authError;
 
     try {
-        const body = await request.json();
-        const { status } = body;
+        const { status } = await request.json();
         const { id } = await params;
 
-        const { error } = await supabaseAdmin().from('requests').update({ status }).eq('id', id);
-        if (error) throw error;
+        await query('update requests set status = $1 where id = $2', [status, id]);
 
         return NextResponse.json({ message: 'success' });
     } catch (error: unknown) {

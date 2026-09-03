@@ -1,14 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    // Uploaded images are served from this app at /uploads/<name>, so no remote image hosts are needed.
     images: {
-        remotePatterns: [
-            {
-                protocol: 'https',
-                hostname: '*.supabase.co',
-                port: '',
-                pathname: '/storage/v1/object/public/**',
-            },
-        ],
+        remotePatterns: [],
     },
 };
 

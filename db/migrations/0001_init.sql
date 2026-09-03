@@ -1,15 +1,28 @@
--- Papa's Puzzles: initial schema (migrated from Firebase Firestore)
+-- Papa's Puzzles: initial schema for Railway Postgres.
+-- Applied by scripts/migrate.mjs (tracked in schema_migrations).
 
 create table public.users (
-    uid text primary key,
+    uid text primary key default gen_random_uuid()::text,
     email text,
     display_name text,
+    password_hash text,
     completed_trades_count integer not null default 0,
     credits integer not null default 0,
     donation_batches_accepted integer not null default 0,
     created_at timestamptz not null default now()
 );
 create index users_email_idx on public.users (email);
+-- One login account per email address.
+create unique index users_email_lower_idx on public.users (lower(email)) where password_hash is not null;
+
+create table public.password_reset_tokens (
+    token_hash text primary key,
+    uid text not null references public.users (uid) on delete cascade,
+    expires_at timestamptz not null,
+    used_at timestamptz,
+    created_at timestamptz not null default now()
+);
+create index password_reset_tokens_uid_idx on public.password_reset_tokens (uid);
 
 create table public.donations (
     id uuid primary key default gen_random_uuid(),
@@ -66,19 +79,6 @@ create table public.redemptions (
     created_at timestamptz not null default now()
 );
 
--- All access goes through Next.js API routes using the service-role key.
--- RLS with no policies blocks direct anon/authenticated access.
-alter table public.users enable row level security;
-alter table public.donations enable row level security;
-alter table public.requests enable row level security;
-alter table public.trades enable row level security;
-alter table public.redemptions enable row level security;
-
--- Public bucket for puzzle photos (uploads happen server-side).
-insert into storage.buckets (id, name, public)
-values ('puzzles', 'puzzles', true)
-on conflict (id) do nothing;
-
 -- Upsert a user row and atomically bump its counters.
 create or replace function public.increment_user_counters(
     p_uid text,
@@ -89,8 +89,6 @@ create or replace function public.increment_user_counters(
     p_display_name text default null
 ) returns public.users
 language plpgsql
-security definer
-set search_path = public
 as $$
 declare
     result public.users;
@@ -115,8 +113,6 @@ create or replace function public.accept_donation_batch(
     p_email text default null
 ) returns json
 language plpgsql
-security definer
-set search_path = public
 as $$
 declare
     v_count integer;
@@ -136,7 +132,7 @@ begin
     if p_uid is not null then
         select * into v_user from public.users where uid = p_uid;
     elsif p_email is not null then
-        select * into v_user from public.users where email = p_email limit 1;
+        select * into v_user from public.users where lower(email) = lower(p_email) limit 1;
     end if;
 
     v_first := coalesce(v_user.donation_batches_accepted, 0) = 0;
@@ -171,8 +167,6 @@ create or replace function public.redeem_puzzles(
     p_donation_ids uuid[]
 ) returns json
 language plpgsql
-security definer
-set search_path = public
 as $$
 declare
     v_credits integer;
@@ -217,8 +211,3 @@ begin
     return json_build_object('redemptionId', v_redemption_id);
 end;
 $$;
-
--- Only the service role may call these.
-revoke execute on function public.increment_user_counters(text, integer, integer, integer, text, text) from public, anon, authenticated;
-revoke execute on function public.accept_donation_batch(text, text, text) from public, anon, authenticated;
-revoke execute on function public.redeem_puzzles(text, text, uuid[]) from public, anon, authenticated;

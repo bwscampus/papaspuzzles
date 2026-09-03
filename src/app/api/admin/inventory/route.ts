@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
+import { queryOne, errorResponse, toPieces } from '@/lib/db';
 import { requireAdminSession } from '@/lib/adminAuth';
 
 export async function POST(request: Request) {
@@ -10,22 +10,20 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { name, pieces, difficulty, theme, condition, email, image_url } = body;
 
-        const { data, error } = await supabaseAdmin()
-            .from('donations')
-            .insert({
+        const data = await queryOne(
+            `insert into donations (name, pieces, difficulty, theme, condition, email, image_url, status, source)
+             values ($1, $2, $3, $4, $5, $6, $7, 'available', 'admin')
+             returning *`,
+            [
                 name,
-                pieces: pieces === '' || pieces === null || pieces === undefined ? null : Number(pieces),
+                toPieces(pieces),
                 difficulty,
-                theme: typeof theme === 'string' ? theme.trim() : theme,
+                typeof theme === 'string' ? theme.trim() : theme,
                 condition,
                 email,
-                image_url: image_url ?? null,
-                status: 'available', // Explicitly set as available for trade
-                source: 'admin',
-            })
-            .select()
-            .single();
-        if (error) throw error;
+                image_url ?? null,
+            ]
+        );
 
         return NextResponse.json({ message: 'success', data });
     } catch (error: unknown) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
+import { query, errorResponse } from '@/lib/db';
 import { requireAdminSession } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
@@ -16,31 +16,25 @@ export async function GET() {
     if (authError) return authError;
 
     try {
-        const db = supabaseAdmin();
-        const { data: trades, error } = await db
-            .from('trades')
-            .select('*')
-            .order('created_at', { ascending: false });
-        if (error) throw error;
+        const trades = await query<TradeRow>('select * from trades order by created_at desc');
 
         // Resolve donation names in a single query.
         const ids = new Set<string>();
-        for (const t of trades as TradeRow[]) {
+        for (const t of trades) {
             for (const id of t.given_donation_ids ?? []) ids.add(id);
             if (t.received_donation_id) ids.add(t.received_donation_id);
         }
 
         const names = new Map<string, string>();
         if (ids.size > 0) {
-            const { data: donations, error: donationError } = await db
-                .from('donations')
-                .select('id, name')
-                .in('id', Array.from(ids));
-            if (donationError) throw donationError;
-            for (const d of donations ?? []) names.set(d.id, d.name || d.id);
+            const donations = await query<{ id: string; name: string | null }>(
+                'select id, name from donations where id = any($1::uuid[])',
+                [Array.from(ids)]
+            );
+            for (const d of donations) names.set(d.id, d.name || d.id);
         }
 
-        const data = (trades as TradeRow[]).map((trade) => ({
+        const data = trades.map((trade) => ({
             ...trade,
             given_donation_ids: trade.given_donation_ids ?? [],
             given_donation_names: (trade.given_donation_ids ?? [])

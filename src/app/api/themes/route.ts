@@ -1,17 +1,16 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
+import { query, errorResponse } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const { data, error } = await supabaseAdmin().from('donations').select('theme');
-        if (error) throw error;
+        const rows = await query<{ theme: string | null }>('select distinct theme from donations');
 
         const seen = new Set<string>();
         const themes: string[] = [];
 
-        for (const row of data ?? []) {
+        for (const row of rows) {
             const rawTheme = row.theme;
             if (typeof rawTheme !== 'string') continue;
 
