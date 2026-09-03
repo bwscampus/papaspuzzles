@@ -7,11 +7,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (authError) return authError;
 
     try {
-        const body = await request.json();
-        const { status } = body;
         const { id } = await params;
+        const { status } = await request.json();
 
-        const { error } = await supabaseAdmin().from('requests').update({ status }).eq('id', id);
+        if (status !== 'pending_pickup' && status !== 'fulfilled') {
+            return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+        }
+
+        const { error } = await supabaseAdmin().from('redemptions').update({ status }).eq('id', id);
         if (error) throw error;
 
         return NextResponse.json({ message: 'success' });

@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const snapshot = await adminDb.collection('donations').select('theme').get();
+        const { data, error } = await supabaseAdmin().from('donations').select('theme');
+        if (error) throw error;
+
         const seen = new Set<string>();
         const themes: string[] = [];
 
-        for (const doc of snapshot.docs) {
-            const rawTheme = doc.data().theme;
+        for (const row of data ?? []) {
+            const rawTheme = row.theme;
             if (typeof rawTheme !== 'string') continue;
 
             const trimmedTheme = rawTheme.trim();
@@ -27,6 +29,6 @@ export async function GET() {
         return NextResponse.json({ message: 'success', data: themes });
     } catch (error: unknown) {
         console.error('Themes API error:', error);
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+        return errorResponse(error, 500);
     }
 }

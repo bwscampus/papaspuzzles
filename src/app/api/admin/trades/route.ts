@@ -1,59 +1,59 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
 import { requireAdminSession } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
+
+interface TradeRow {
+    id: string;
+    given_donation_ids: string[] | null;
+    received_donation_id: string | null;
+    [key: string]: unknown;
+}
 
 export async function GET() {
     const authError = await requireAdminSession();
     if (authError) return authError;
 
     try {
-        const snapshot = await adminDb.collection('trades')
-            .orderBy('created_at', 'desc')
-            .get();
+        const db = supabaseAdmin();
+        const { data: trades, error } = await db
+            .from('trades')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
 
-        const trades = await Promise.all(
-            snapshot.docs.map(async (doc) => {
-                const trade = { id: doc.id, ...doc.data() } as Record<string, unknown> & { id: string };
+        // Resolve donation names in a single query.
+        const ids = new Set<string>();
+        for (const t of trades as TradeRow[]) {
+            for (const id of t.given_donation_ids ?? []) ids.add(id);
+            if (t.received_donation_id) ids.add(t.received_donation_id);
+        }
 
-                // Fetch donation names for display
-                const givenIds: string[] = (trade.given_donation_ids as string[]) || (trade.given_donation_id ? [trade.given_donation_id as string] : []);
-                const givenNames: string[] = [];
-                for (const donationId of givenIds) {
-                    try {
-                        const donationDoc = await adminDb.collection('donations').doc(donationId).get();
-                        if (donationDoc.exists) {
-                            givenNames.push((donationDoc.data() as { name?: string }).name || donationId);
-                        }
-                    } catch {
-                        givenNames.push(donationId);
-                    }
-                }
+        const names = new Map<string, string>();
+        if (ids.size > 0) {
+            const { data: donations, error: donationError } = await db
+                .from('donations')
+                .select('id, name')
+                .in('id', Array.from(ids));
+            if (donationError) throw donationError;
+            for (const d of donations ?? []) names.set(d.id, d.name || d.id);
+        }
 
-                let receivedName = trade.received_donation_id as string;
-                if (trade.received_donation_id) {
-                    try {
-                        const receivedDoc = await adminDb.collection('donations').doc(trade.received_donation_id as string).get();
-                        if (receivedDoc.exists) {
-                            receivedName = (receivedDoc.data() as { name?: string }).name || trade.received_donation_id as string;
-                        }
-                    } catch {
-                        // keep original id
-                    }
-                }
+        const data = (trades as TradeRow[]).map((trade) => ({
+            ...trade,
+            given_donation_ids: trade.given_donation_ids ?? [],
+            given_donation_names: (trade.given_donation_ids ?? [])
+                .filter((id) => names.has(id))
+                .map((id) => names.get(id) as string),
+            received_donation_name: trade.received_donation_id
+                ? names.get(trade.received_donation_id) ?? trade.received_donation_id
+                : null,
+        }));
 
-                return {
-                    ...trade,
-                    given_donation_names: givenNames,
-                    received_donation_name: receivedName,
-                };
-            })
-        );
-
-        return NextResponse.json({ message: 'success', data: trades });
+        return NextResponse.json({ message: 'success', data });
     } catch (error: unknown) {
         console.error('GET /api/admin/trades error:', error);
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
+        return errorResponse(error);
     }
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
 import { validateString, validateEmail } from '@/lib/validate';
 
 export async function POST(request: Request) {
@@ -16,19 +16,21 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: e instanceof Error ? e.message : 'Validation error' }, { status: 400 });
         }
 
-        const docRef = await adminDb.collection('requests').add({
-            type,
-            pieces,
-            difficulty,
-            email,
-            status: 'pending',
-            created_at: new Date().toISOString()
-        });
+        const { data, error } = await supabaseAdmin()
+            .from('requests')
+            .insert({
+                type,
+                pieces,
+                difficulty: difficulty ?? null,
+                email,
+                status: 'pending',
+            })
+            .select()
+            .single();
+        if (error) throw error;
 
-        const newDoc = await docRef.get();
-
-        return NextResponse.json({ message: 'success', data: { id: docRef.id, ...newDoc.data() } });
+        return NextResponse.json({ message: 'success', data });
     } catch (error: unknown) {
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
+        return errorResponse(error);
     }
 }

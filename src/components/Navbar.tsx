@@ -6,7 +6,7 @@ import { useState } from "react";
 import { User, Search, LogIn, LogOut, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
-import { getAuthErrorMessage } from "@/lib/firebaseErrorMessages";
+import { getAuthErrorMessage } from "@/lib/authErrorMessages";
 
 export default function Navbar() {
     const { user, loading, signIn, signUp, signOut, resetPassword } = useAuth();

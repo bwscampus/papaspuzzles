@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,9 +12,16 @@ interface PuzzleInput {
     image_url?: string | null;
 }
 
+function toPieces(value: unknown): number | null {
+    if (value === '' || value === null || value === undefined) return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+}
+
 export async function POST(request: Request) {
     try {
         const body = await request.json();
+        const db = supabaseAdmin();
 
         // Batch submission from the new donate form
         if (Array.isArray(body.puzzles)) {
@@ -29,17 +36,15 @@ export async function POST(request: Request) {
             }
 
             const batchId = crypto.randomUUID();
-            const now = new Date().toISOString();
-            const batch = adminDb.batch();
+            const rows = [];
 
             for (const puzzle of puzzles) {
                 if (!puzzle.name?.trim()) {
                     return NextResponse.json({ error: 'Each puzzle must have a name' }, { status: 400 });
                 }
-                const ref = adminDb.collection('donations').doc();
-                batch.set(ref, {
+                rows.push({
                     name: puzzle.name.trim(),
-                    pieces: puzzle.pieces ? Number(puzzle.pieces) : null,
+                    pieces: toPieces(puzzle.pieces),
                     difficulty: puzzle.difficulty || 'medium',
                     theme: puzzle.theme?.trim() || '',
                     condition: puzzle.condition || 'good',
@@ -49,11 +54,12 @@ export async function POST(request: Request) {
                     status: 'pending_admin_review',
                     batch_id: batchId,
                     source: 'user_donation',
-                    created_at: now,
                 });
             }
 
-            await batch.commit();
+            const { error } = await db.from('donations').insert(rows);
+            if (error) throw error;
+
             return NextResponse.json({ message: 'success', batchId });
         }
 
@@ -63,21 +69,25 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
         }
 
-        const docRef = await adminDb.collection('donations').add({
-            name: name.trim(),
-            pieces: pieces ? Number(pieces) : null,
-            difficulty: difficulty || 'medium',
-            theme: theme?.trim() || '',
-            condition: condition || 'good',
-            email,
-            status: 'pending_admin_review',
-            source: 'user_donation',
-            created_at: new Date().toISOString(),
-        });
+        const { data, error } = await db
+            .from('donations')
+            .insert({
+                name: name.trim(),
+                pieces: toPieces(pieces),
+                difficulty: difficulty || 'medium',
+                theme: theme?.trim() || '',
+                condition: condition || 'good',
+                email,
+                status: 'pending_admin_review',
+                source: 'user_donation',
+            })
+            .select('id')
+            .single();
+        if (error) throw error;
 
-        return NextResponse.json({ message: 'success', id: docRef.id });
+        return NextResponse.json({ message: 'success', id: data.id });
     } catch (error: unknown) {
         console.error('Donation error:', error);
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+        return errorResponse(error, 500);
     }
 }

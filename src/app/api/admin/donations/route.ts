@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
 import { requireAdminSession } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
@@ -9,18 +9,14 @@ export async function GET() {
     if (authError) return authError;
 
     try {
-        const snapshot = await adminDb.collection('donations')
-            .orderBy('created_at', 'desc')
-            .get();
-
-        const data = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        const { data, error } = await supabaseAdmin()
+            .from('donations')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
 
         return NextResponse.json({ message: 'success', data });
     } catch (error: unknown) {
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
+        return errorResponse(error);
     }
 }
-

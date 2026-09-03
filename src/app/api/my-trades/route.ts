@@ -1,5 +1,14 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
+
+export const dynamic = 'force-dynamic';
+
+interface TradeRow {
+    id: string;
+    given_donation_ids: string[] | null;
+    received_donation_id: string | null;
+    [key: string]: unknown;
+}
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -10,44 +19,48 @@ export async function GET(request: Request) {
     }
 
     try {
-        const tradesSnapshot = await adminDb.collection('trades')
-            .where('user_email', '==', email)
-            .orderBy('created_at', 'desc')
-            .get();
+        const db = supabaseAdmin();
+        const { data: trades, error } = await db
+            .from('trades')
+            .select('*')
+            .eq('user_email', email)
+            .order('created_at', { ascending: false });
+        if (error) throw error;
 
-        const trades = tradesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as (Record<string, unknown> & { id: string })[];
+        // Resolve related donations in one query (SQL join equivalent of the old NoSQL lookups).
+        const ids = new Set<string>();
+        for (const t of trades as TradeRow[]) {
+            for (const id of t.given_donation_ids ?? []) ids.add(id);
+            if (t.received_donation_id) ids.add(t.received_donation_id);
+        }
 
-        // Fetch related donations manually (NoSQL join)
-        const formattedData = await Promise.all(trades.map(async (trade) => {
-            let givenName = '';
-            let receivedName = '';
-            let receivedImage = '';
+        const donations = new Map<string, { name: string; image_url: string | null }>();
+        if (ids.size > 0) {
+            const { data, error: donationError } = await db
+                .from('donations')
+                .select('id, name, image_url')
+                .in('id', Array.from(ids));
+            if (donationError) throw donationError;
+            for (const d of data ?? []) donations.set(d.id, { name: d.name ?? '', image_url: d.image_url ?? null });
+        }
 
-            if (trade.given_donation_id) {
-                const givenDoc = await adminDb.collection('donations').doc(trade.given_donation_id as string).get();
-                if (givenDoc.exists) givenName = (givenDoc.data() as { name?: string })?.name ?? '';
-            }
-
-            if (trade.received_donation_id) {
-                const receivedDoc = await adminDb.collection('donations').doc(trade.received_donation_id as string).get();
-                if (receivedDoc.exists) {
-                    const data = receivedDoc.data() as { name?: string; image_url?: string } | undefined;
-                    receivedName = data?.name ?? '';
-                    receivedImage = data?.image_url ?? '';
-                }
-            }
+        const formattedData = (trades as TradeRow[]).map((trade) => {
+            const givenNames = (trade.given_donation_ids ?? [])
+                .map((id) => donations.get(id)?.name)
+                .filter((name): name is string => !!name);
+            const received = trade.received_donation_id ? donations.get(trade.received_donation_id) : undefined;
 
             return {
                 ...trade,
-                given_name: givenName,
-                received_name: receivedName,
-                received_image: receivedImage
+                given_name: givenNames.join(', '),
+                received_name: received?.name ?? '',
+                received_image: received?.image_url ?? '',
             };
-        }));
+        });
 
         return NextResponse.json({ message: 'success', data: formattedData });
     } catch (error: unknown) {
         console.error('MyTrades error:', error);
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
+        return errorResponse(error);
     }
 }

@@ -37,3 +37,5 @@ server/puzzles.db
 server/*.db
 server/test_image.jpg
 server/uploads/
+.env*
+!.env*.example

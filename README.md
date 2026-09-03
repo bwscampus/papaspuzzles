@@ -1,6 +1,6 @@
-# Puzzle Swap MVP
+# Papa's Puzzles
 
-A simple marketplace for families to donate and request old puzzles.
+A simple marketplace for families to donate, trade, and request old puzzles.
 
 ## Prerequisites
 - Node.js (v18 or higher recommended)
@@ -8,66 +8,60 @@ A simple marketplace for families to donate and request old puzzles.
 
 ## Setup Instructions (Local)
 
-### 1. Frontend + API (Next.js)
-The app runs from the Next.js project in [client/](client/).
+### 1. Install and run
 
 ```bash
-cd client
 npm install
 npm run dev
 ```
-The frontend will start on `http://localhost:3000`.
+The app starts on `http://localhost:3000`.
 
-### 2. Firebase configuration
-Create a local environment file at `client/.env.local` using [client/.env.local.example](client/.env.local.example).
+### 2. Supabase configuration
+Create `.env.local` from [.env.local.example](.env.local.example). Values come from the Supabase
+dashboard under **Project Settings → API** (project `papaspuzzles`).
 
 Required client variables:
-- `NEXT_PUBLIC_FIREBASE_API_KEY`
-- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-- `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
-Required admin variables (API routes):
-- `FIREBASE_SERVICE_ACCOUNT` (JSON string), **or**
-- `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
-- `FIREBASE_STORAGE_BUCKET`
+Required server variable (API routes only, never exposed to the browser):
+- `SUPABASE_SECRET_KEY`
 
-### 3. Mock mode (optional)
-For UI testing without Firebase, set:
+Alternatively, pull them from Vercel: `vercel env pull .env.local`.
 
+### 3. Database schema
+The schema lives in [supabase/migrations](supabase/migrations) and is managed with the Supabase CLI:
+
+```bash
+supabase link --project-ref <project-ref>
+supabase db push
 ```
-NEXT_PUBLIC_USE_MOCK_DATA=true
-```
+
+Tables: `users`, `donations`, `requests`, `trades`, `redemptions`. Puzzle photos are stored in the
+public `puzzles` storage bucket. Multi-step operations (accepting a donation batch, redeeming credits,
+bumping user counters) are Postgres functions so they run atomically.
 
 ## Features
 - **Landing Page**: Overview of the platform.
 - **Explore**: Browse listings and request a swap.
-- **Donate**: Form to submit puzzle donations.
+- **Donate**: Submit a batch of puzzles for admin review; credits are awarded on acceptance.
+- **Redeem**: Spend credits on available puzzles.
 - **Request**: Form to request puzzles.
-- **Admin Panel**: View donations and requests, add inventory.
+- **Admin Panel**: Review donations, requests, trades, and redemptions; add inventory.
   - URL: `/admin`
-  - Password: stored in ADMIN_PASSWORD environment variable (never commit this)
+  - Auth is currently disabled for alpha testing.
 
-## Production Checklist (Vercel)
-- [ ] Set all Firebase env vars in Vercel (both public and admin variables).
-- [ ] Disable mock mode (`NEXT_PUBLIC_USE_MOCK_DATA=false`).
-- [ ] Verify Firestore + Storage rules (lock down access).
-- [ ] Confirm file upload size limits and formats.
-- [ ] Add basic privacy policy (emails collected).
-- [ ] Smoke test key flows: Explore → Trade, Admin add, Donation submit.
-
-## Handoff to Student
-1. In GitHub, add the student as a collaborator **or** have them fork the repo.
-2. Student clones their repo locally.
-3. In Vercel, import the repo and set environment variables (Firebase public + admin).
-4. Deploy and verify core flows:
-  - Explore shows listings
-  - Admin can add inventory
-  - Trade flow completes and updates inventory
+## Production (Vercel)
+- Vercel project: `papaspuzzles` (team BCIL). Production URL: https://papaspuzzles-rouge.vercel.app
+- Set the three Supabase env vars in Vercel for Production, Preview, and Development.
+- Supabase Auth **Site URL** and **Redirect URLs** must include the production domain so password
+  reset emails link back to `/reset-password`. They are managed in [supabase/config.toml](supabase/config.toml)
+  and applied with `supabase config push`.
+- Email confirmation on sign-up is disabled (users are signed in immediately, matching the original
+  Firebase behaviour). Supabase's built-in SMTP is rate limited; configure custom SMTP before launch.
+- Smoke test key flows: Explore → Trade, Admin add inventory, Donation submit → Accept batch, Redeem.
 
 ## Tech Stack
 - **Frontend**: Next.js, React, Tailwind CSS, Lucide Icons
 - **Backend**: Next.js API Routes
-- **Database**: Firebase Firestore + Storage
+- **Database / Auth / Storage**: Supabase (Postgres, Supabase Auth, Supabase Storage)

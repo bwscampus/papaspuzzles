@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/context/AuthContext";
-import { getAuthErrorMessage } from "@/lib/firebaseErrorMessages";
+import { getAuthErrorMessage } from "@/lib/authErrorMessages";
 import { CheckCircle, Upload, ArrowRight, ArrowLeft, LogIn } from "lucide-react";
 import { Donation } from "@/types/puzzle";
 

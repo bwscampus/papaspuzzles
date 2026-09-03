@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
-import * as admin from 'firebase-admin';
+import { supabaseAdmin, errorResponse } from '@/lib/supabaseAdmin';
 import { requireAdminSession } from '@/lib/adminAuth';
+
+const EDITABLE_FIELDS = ['status', 'dropoff_datetime', 'completed_at'] as const;
 
 export async function PATCH(
     request: Request,
@@ -14,50 +15,54 @@ export async function PATCH(
         const { id } = await params;
         const body = await request.json();
         const { action } = body;
+        const db = supabaseAdmin();
 
         if (action === 'confirm_dropoff') {
-            // Get the trade to find the uid
-            const tradeDoc = await adminDb.collection('trades').doc(id).get();
-            if (!tradeDoc.exists) {
+            const { data: trade, error: fetchError } = await db
+                .from('trades')
+                .select('uid, user_email, user_name')
+                .eq('id', id)
+                .maybeSingle();
+            if (fetchError) throw fetchError;
+            if (!trade) {
                 return NextResponse.json({ error: 'Trade not found' }, { status: 404 });
             }
 
-            const trade = tradeDoc.data() as { uid?: string; user_email?: string; user_name?: string };
+            const { error: updateError } = await db
+                .from('trades')
+                .update({ status: 'completed', completed_at: new Date().toISOString() })
+                .eq('id', id);
+            if (updateError) throw updateError;
 
-            // Set trade status to completed
-            await adminDb.collection('trades').doc(id).update({
-                status: 'completed',
-                completed_at: new Date().toISOString(),
-            });
-
-            // Increment completedTradesCount on the user document
+            // Bump the user's completed trade count (creates the user row if needed).
             if (trade.uid) {
-                const userRef = adminDb.collection('users').doc(trade.uid);
-                const userDoc = await userRef.get();
-                if (userDoc.exists) {
-                    await userRef.update({
-                        completedTradesCount: admin.firestore.FieldValue.increment(1),
-                    });
-                } else {
-                    await userRef.set({
-                        uid: trade.uid,
-                        email: trade.user_email || null,
-                        displayName: trade.user_name || null,
-                        completedTradesCount: 1,
-                        credits: 0,
-                        createdAt: new Date().toISOString(),
-                    });
-                }
+                const { error: rpcError } = await db.rpc('increment_user_counters', {
+                    p_uid: trade.uid,
+                    p_trades: 1,
+                    p_email: trade.user_email || null,
+                    p_display_name: trade.user_name || null,
+                });
+                if (rpcError) throw rpcError;
             }
 
             return NextResponse.json({ message: 'success' });
         }
 
         // Generic update
-        await adminDb.collection('trades').doc(id).update(body);
+        const update: Record<string, unknown> = {};
+        for (const field of EDITABLE_FIELDS) {
+            if (field in body) update[field] = body[field];
+        }
+        if (Object.keys(update).length === 0) {
+            return NextResponse.json({ error: 'No editable fields provided' }, { status: 400 });
+        }
+
+        const { error } = await db.from('trades').update(update).eq('id', id);
+        if (error) throw error;
+
         return NextResponse.json({ message: 'success' });
     } catch (error: unknown) {
         console.error('PATCH /api/admin/trades/[id] error:', error);
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 400 });
+        return errorResponse(error);
     }
 }
