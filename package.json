@@ -5,7 +5,7 @@
     "scripts": {
         "dev": "next dev",
         "build": "next build",
-        "start": "node scripts/migrate.mjs && next start",
+        "start": "node scripts/migrate.mjs && exec next start",
         "lint": "eslint .",
         "migrate": "node scripts/migrate.mjs",
         "typecheck": "tsc --noEmit",
