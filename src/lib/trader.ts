@@ -10,9 +10,10 @@ export function requiredGivenCount(returning: boolean): 1 | 2 {
 type Queryable = Pick<PoolClient, 'query'>;
 
 export async function isReturningTrader(email: string, client: Queryable = getPool()): Promise<boolean> {
-    const { rows } = await client.query<{ returning: boolean }>('select is_returning_trader($1) as returning', [
-        email,
-    ]);
+    const { rows } = await client.query<{ returning: boolean }>(
+        'select is_returning_trader($1) as returning',
+        [email]
+    );
     return rows[0]?.returning ?? false;
 }
 

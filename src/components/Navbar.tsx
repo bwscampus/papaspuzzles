@@ -1,212 +1,125 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import Image from "next/image";
-import { useState } from "react";
-import { User, Search, LogIn, LogOut, X } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState } from 'react';
+import { LogIn, LogOut, Menu, Shield, X } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
+import { SITE } from '@/content/site';
+import { Button } from './ui/Button';
 
-import { getAuthErrorMessage } from "@/lib/authErrorMessages";
+const LINKS = [
+    { href: '/explore', label: 'Explore' },
+    { href: '/donate', label: 'Donate' },
+    { href: '/credits', label: 'Use Your Credits' },
+    { href: '/my-trades', label: 'My Trades' },
+    { href: '/about', label: 'About Us' },
+];
 
-export default function Navbar() {
-    const { user, loading, signIn, signUp, signOut, resetPassword } = useAuth();
-    const [showAuthModal, setShowAuthModal] = useState(false);
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
-    const [authError, setAuthError] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
+export function Navbar() {
+    const { user, loading, signOut, openAuthDialog } = useAuth();
+    const toast = useToast();
+    const [open, setOpen] = useState(false);
 
-    const handleAuthSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (isSubmitting) return;
-        setAuthError("");
-        setIsSubmitting(true);
-        try {
-            if (authMode === "signin") {
-                await signIn(email, password);
-            } else {
-                await signUp(email, password);
-            }
-            setShowAuthModal(false);
-            setEmail("");
-            setPassword("");
-        } catch (err: unknown) {
-            setAuthError(getAuthErrorMessage(err));
-        } finally {
-            setIsSubmitting(false);
-        }
+    const handleSignOut = async () => {
+        await signOut();
+        toast.info('Signed out.');
+        setOpen(false);
     };
 
-    const handleCloseModal = () => {
-        setShowAuthModal(false);
-        setEmail("");
-        setPassword("");
-        setAuthError("");
-    };
+    const authControls = user ? (
+        <div className="flex items-center gap-3">
+            {user.isAdmin && (
+                <Link
+                    href="/admin"
+                    className="flex items-center gap-1 text-sm font-semibold text-accent-text hover:underline"
+                >
+                    <Shield className="h-4 w-4" aria-hidden="true" /> Admin
+                </Link>
+            )}
+            <span
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-primary font-display text-sm font-bold text-white"
+                title={user.email}
+                aria-label={`Signed in as ${user.email}`}
+            >
+                {(user.displayName || user.email).charAt(0).toUpperCase()}
+            </span>
+            <button
+                type="button"
+                onClick={handleSignOut}
+                className="flex items-center gap-1 text-sm font-medium text-muted hover:text-primary"
+            >
+                <LogOut className="h-4 w-4" aria-hidden="true" /> Sign out
+            </button>
+        </div>
+    ) : (
+        <button
+            type="button"
+            onClick={() => openAuthDialog('signin')}
+            className="flex items-center gap-1 text-sm font-medium text-muted hover:text-primary"
+        >
+            <LogIn className="h-4 w-4" aria-hidden="true" /> Sign in
+        </button>
+    );
 
     return (
-        <nav className="bg-white shadow-sm sticky top-0 z-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between h-16">
-                    <div className="flex items-center">
-                        <Link href="/" className="flex items-center gap-2">
-                            <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-primary">
-                                <Image
-                                    src="/logo.png"
-                                    alt="Papa's Puzzles Logo"
-                                    fill
-                                    className="object-cover object-center scale-[1.6]"
-                                    priority
-                                />
-                            </div>
-                            <span className="text-xl font-bold text-primary">Papa&apos;s Puzzles</span>
-                        </Link>
-                    </div>
+        <header className="sticky top-0 z-40 border-b border-rose/30 bg-white/95 backdrop-blur">
+            <nav
+                aria-label="Main"
+                className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
+            >
+                <Link href="/" className="flex items-center gap-2">
+                    <Image src="/logo.png" alt="" width={40} height={40} className="rounded-full" priority />
+                    <span className="font-display text-xl font-bold text-primary">{SITE.name}</span>
+                </Link>
 
-                    <div className="flex items-center gap-6">
-                        <Link href="/explore" className="text-gray-600 hover:text-primary font-medium transition-colors flex items-center gap-1">
-                            <Search className="w-4 h-4" />
-                            Explore
-                        </Link>
-                        <Link href="/about" className="text-gray-600 hover:text-primary font-medium transition-colors">
-                            About Us
-                        </Link>
-                        <Link href="/my-trades" className="text-gray-600 hover:text-primary font-medium transition-colors flex items-center gap-1">
-                            <User className="w-4 h-4" />
-                            My Trades
-                        </Link>
+                <div className="hidden items-center gap-6 md:flex">
+                    {LINKS.map((l) => (
                         <Link
-                            href="/trade"
-                            className="bg-primary text-white px-4 py-2 rounded-full font-bold hover:bg-red-400 transition-colors shadow-sm"
+                            key={l.href}
+                            href={l.href}
+                            className="text-sm font-medium text-muted hover:text-primary"
                         >
-                            Start a Trade
+                            {l.label}
                         </Link>
-
-                        {!loading && (
-                            user ? (
-                                <div className="flex items-center gap-2">
-                                    {user.photoURL ? (
-                                        <img
-                                            src={user.photoURL}
-                                            alt={user.displayName || "User"}
-                                            className="w-8 h-8 rounded-full border-2 border-primary"
-                                        />
-                                    ) : (
-                                        <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold">
-                                            {(user.displayName || user.email || "U").charAt(0).toUpperCase()}
-                                        </div>
-                                    )}
-                                    <button
-                                        onClick={signOut}
-                                        className="text-gray-600 hover:text-primary font-medium transition-colors flex items-center gap-1"
-                                        title="Sign Out"
-                                    >
-                                        <LogOut className="w-4 h-4" />
-                                        <span className="hidden sm:inline">Sign Out</span>
-                                    </button>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={() => setShowAuthModal(true)}
-                                    className="text-gray-600 hover:text-primary font-medium transition-colors flex items-center gap-1"
-                                >
-                                    <LogIn className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Sign In</span>
-                                </button>
-                            )
-                        )}
-                    </div>
+                    ))}
+                    <Button href="/trade" size="sm">
+                        Start a Trade
+                    </Button>
+                    {!loading && authControls}
                 </div>
-            </div>
 
-            {showAuthModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm relative">
-                        <button
-                            onClick={handleCloseModal}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-                            aria-label="Close"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                        <h2 className="text-xl font-bold text-primary mb-6">
-                            {authMode === "signin" ? "Sign In" : "Sign Up"}
-                        </h2>
-                        <form onSubmit={handleAuthSubmit} className="flex flex-col gap-4">
-                            <input
-                                type="email"
-                                placeholder="Email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                className="border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:border-primary"
-                            />
-                            <input
-                                type="password"
-                                placeholder="Password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                className="border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:border-primary"
-                            />
-                            {authError && (
-                                <p className="text-red-500 text-sm">{authError}</p>
-                            )}
-                            <button
-                                type="submit"
-                                disabled={isSubmitting}
-                                className="bg-primary text-white px-4 py-2 rounded-full font-bold hover:bg-red-400 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                <button
+                    type="button"
+                    className="rounded-full p-2 text-primary md:hidden"
+                    aria-expanded={open}
+                    aria-controls="mobile-menu"
+                    aria-label={open ? 'Close menu' : 'Open menu'}
+                    onClick={() => setOpen((v) => !v)}
+                >
+                    {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                </button>
+            </nav>
+
+            {open && (
+                <div id="mobile-menu" className="border-t border-rose/30 bg-white px-4 py-4 md:hidden">
+                    <div className="flex flex-col gap-3">
+                        {LINKS.map((l) => (
+                            <Link
+                                key={l.href}
+                                href={l.href}
+                                onClick={() => setOpen(false)}
+                                className="text-base font-medium text-ink"
                             >
-                                {isSubmitting ? "Please wait…" : authMode === "signin" ? "Sign In" : "Sign Up"}
-                            </button>
-                        </form>
-                        {authMode === "signin" && (
-                            <div className="text-center mt-2">
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        if (!email) { setAuthError("Enter your email above first."); return; }
-                                        try {
-                                            await resetPassword(email);
-                                            setAuthError("");
-                                            alert("Password reset email sent!");
-                                        } catch (err: unknown) {
-                                            setAuthError(getAuthErrorMessage(err));
-                                        }
-                                    }}
-                                    className="text-sm text-gray-500 hover:text-primary hover:underline"
-                                >
-                                    Forgot password?
-                                </button>
-                            </div>
-                        )}
-                        <p className="text-sm text-gray-500 text-center mt-4">
-                            {authMode === "signin" ? (
-                                <>
-                                    Don&apos;t have an account?{" "}
-                                    <button
-                                        onClick={() => { setAuthMode("signup"); setAuthError(""); }}
-                                        className="text-primary font-medium hover:underline"
-                                    >
-                                        Sign Up
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    Already have an account?{" "}
-                                    <button
-                                        onClick={() => { setAuthMode("signin"); setAuthError(""); }}
-                                        className="text-primary font-medium hover:underline"
-                                    >
-                                        Sign In
-                                    </button>
-                                </>
-                            )}
-                        </p>
+                                {l.label}
+                            </Link>
+                        ))}
+                        <Button href="/trade">Start a Trade</Button>
+                        {!loading && <div className="pt-2">{authControls}</div>}
                     </div>
                 </div>
             )}
-        </nav>
+        </header>
     );
 }

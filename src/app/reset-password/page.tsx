@@ -1,109 +1,102 @@
-"use client";
+'use client';
 
-import { Suspense, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { getAuthErrorMessage } from "@/lib/authErrorMessages";
+import { Suspense, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { PageShell } from '@/components/PageShell';
+import { Alert } from '@/components/ui/Alert';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Field';
+import { useAuth } from '@/context/AuthContext';
+import { api, errorMessage } from '@/lib/client/api';
+import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
 
-function ResetPasswordForm() {
-    const token = useSearchParams().get("token") ?? "";
-    const [password, setPassword] = useState("");
-    const [confirm, setConfirm] = useState("");
-    const [error, setError] = useState("");
+function ResetForm() {
+    const token = useSearchParams().get('token') ?? '';
+    const { refresh, openAuthDialog } = useAuth();
+    const [password, setPassword] = useState('');
+    const [confirm, setConfirm] = useState('');
+    const [error, setError] = useState('');
+    const [busy, setBusy] = useState(false);
     const [done, setDone] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const submit = async (e: FormEvent) => {
         e.preventDefault();
-        if (submitting) return;
-        setError("");
-        if (password.length < 6) {
-            setError("Password must be at least 6 characters.");
-            return;
-        }
-        if (password !== confirm) {
-            setError("Passwords do not match.");
-            return;
-        }
-        setSubmitting(true);
+        if (busy) return;
+        setError('');
+        if (password.length < MIN_PASSWORD_LENGTH)
+            return setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+        if (password !== confirm) return setError('Passwords do not match.');
+        setBusy(true);
         try {
-            const res = await fetch("/api/auth/reset-password", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ token, password }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data.error || "Something went wrong. Please try again.");
+            await api.post('/api/auth/reset-password', { token, password });
+            await refresh();
             setDone(true);
-        } catch (err: unknown) {
-            setError(getAuthErrorMessage(err));
+        } catch (err) {
+            setError(errorMessage(err));
         } finally {
-            setSubmitting(false);
+            setBusy(false);
         }
     };
 
     if (done) {
         return (
-            <div className="flex flex-col gap-4">
-                <p className="text-gray-700">Your password has been updated and you are signed in.</p>
-                <Link
-                    href="/"
-                    className="bg-primary text-white px-4 py-2 rounded-full font-bold hover:bg-red-400 transition-colors shadow-sm text-center"
-                >
+            <Card>
+                <p className="text-lg">Your password has been updated and you are signed in.</p>
+                <Button href="/" className="mt-6">
                     Back to home
-                </Link>
-            </div>
+                </Button>
+            </Card>
         );
     }
 
     if (!token) {
         return (
-            <p className="text-gray-500">
-                Open this page from the link in your password reset email. If the link has expired,
-                request a new one from the Sign In dialog.
-            </p>
+            <Card>
+                <p className="text-muted">
+                    Open this page from the link in your password reset email. If the link has expired,
+                    request a new one.
+                </p>
+                <Button variant="outline" className="mt-6" onClick={() => openAuthDialog('forgot')}>
+                    Request a new link
+                </Button>
+            </Card>
         );
     }
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <input
-                type="password"
-                placeholder="New password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:border-primary"
-            />
-            <input
-                type="password"
-                placeholder="Confirm new password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                required
-                className="border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:border-primary"
-            />
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            <button
-                type="submit"
-                disabled={submitting}
-                className="bg-primary text-white px-4 py-2 rounded-full font-bold hover:bg-red-400 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-                {submitting ? "Saving…" : "Save new password"}
-            </button>
-        </form>
+        <Card>
+            <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+                <Input
+                    label="New password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                    hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+                />
+                <Input
+                    label="Confirm new password"
+                    type="password"
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    autoComplete="new-password"
+                />
+                {error && <Alert tone="error">{error}</Alert>}
+                <Button type="submit" size="lg" loading={busy}>
+                    Save new password
+                </Button>
+            </form>
+        </Card>
     );
 }
 
 export default function ResetPasswordPage() {
     return (
-        <div className="max-w-md mx-auto px-4 py-16">
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h1 className="text-2xl font-bold text-primary mb-6">Reset your password</h1>
-                <Suspense fallback={<p className="text-gray-500">Loading…</p>}>
-                    <ResetPasswordForm />
-                </Suspense>
-            </div>
-        </div>
+        <PageShell title="Reset your password" width="narrow">
+            <Suspense fallback={null}>
+                <ResetForm />
+            </Suspense>
+        </PageShell>
     );
 }

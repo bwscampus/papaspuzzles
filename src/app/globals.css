@@ -2,18 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 74, 74, 74;
-  --background-start-rgb: 249, 249, 249;
-  --background-end-rgb: 255, 255, 255;
-}
-
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+@layer base {
+    html {
+        color-scheme: light;
+    }
+    body {
+        @apply bg-page font-sans text-ink antialiased;
+    }
+    h1,
+    h2,
+    h3,
+    h4 {
+        @apply font-display font-bold tracking-tight text-primary;
+    }
+    :focus-visible {
+        @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-page;
+    }
+    dialog::backdrop {
+        background: rgba(46, 34, 38, 0.55);
+    }
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
 }

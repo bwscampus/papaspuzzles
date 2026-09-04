@@ -113,7 +113,10 @@ export function validatePuzzleInputs(
         throw validationError('Please add at least one puzzle.', field);
     }
     if (raw.length < min) {
-        throw validationError(min === 1 ? 'Please add at least one puzzle.' : `Please add ${min} puzzles.`, field);
+        throw validationError(
+            min === 1 ? 'Please add at least one puzzle.' : `Please add ${min} puzzles.`,
+            field
+        );
     }
     if (raw.length > max) {
         throw validationError(`You can submit at most ${max} puzzles at a time.`, field);

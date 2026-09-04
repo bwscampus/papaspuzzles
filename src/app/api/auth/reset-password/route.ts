@@ -1,44 +1,44 @@
-import { NextResponse } from 'next/server';
-import { queryOne, withTransaction, errorResponse } from '@/lib/db';
-import { createSession, hashPassword, sha256, toSessionUser } from '@/lib/session';
+import { handle, ok, readJson, validationError } from '@/lib/api';
+import { toUser, type UserRow } from '@/lib/auth';
+import { queryOne, withTransaction } from '@/lib/db';
+import { createSession, hashPassword, sha256 } from '@/lib/session';
+import { validatePassword } from '@/lib/validate';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
-    try {
-        const body = await request.json();
-        const token = typeof body.token === 'string' ? body.token : '';
-        const password = typeof body.password === 'string' ? body.password : '';
+export const POST = handle('auth/reset-password', async (request) => {
+    const body = await readJson(request);
+    const token = typeof body.token === 'string' ? body.token : '';
+    if (!token) throw validationError('Reset link is missing or invalid.', 'token');
+    const password = validatePassword(body.password);
+    const tokenHash = sha256(token);
 
-        if (!token) {
-            return NextResponse.json({ error: 'Reset link is missing or invalid.' }, { status: 400 });
-        }
-        if (password.length < 6) {
-            return NextResponse.json({ error: 'Password must be at least 6 characters.' }, { status: 400 });
-        }
-
-        const tokenHash = sha256(token);
-        const record = await queryOne<{ uid: string }>(
-            `select uid from password_reset_tokens
-             where token_hash = $1 and used_at is null and expires_at > now()`,
-            [tokenHash]
+    const record = await queryOne<{ user_id: string }>(
+        `select user_id from password_reset_tokens
+         where token_hash = $1 and used_at is null and expires_at > now()`,
+        [tokenHash]
+    );
+    if (!record) {
+        throw validationError(
+            'This reset link is invalid or has expired. Please request a new one.',
+            'token'
         );
-        if (!record) {
-            return NextResponse.json({ error: 'This reset link is invalid or has expired. Please request a new one.' }, { status: 400 });
-        }
-
-        const passwordHash = await hashPassword(password);
-        const user = await withTransaction(async (client) => {
-            await client.query('update users set password_hash = $1 where uid = $2', [passwordHash, record.uid]);
-            await client.query('update password_reset_tokens set used_at = now() where token_hash = $1', [tokenHash]);
-            const { rows } = await client.query('select uid, email, display_name from users where uid = $1', [record.uid]);
-            return rows[0];
-        });
-
-        await createSession(user.uid);
-        return NextResponse.json({ user: toSessionUser(user) });
-    } catch (error: unknown) {
-        console.error('Reset password error:', error);
-        return errorResponse(error, 500);
     }
-}
+
+    const passwordHash = await hashPassword(password);
+    const user = await withTransaction(async (client) => {
+        // Bumping session_version signs out every other device.
+        const { rows } = await client.query<UserRow>(
+            `update users set password_hash = $1, session_version = session_version + 1
+             where id = $2 returning id, email, display_name, session_version`,
+            [passwordHash, record.user_id]
+        );
+        await client.query('update password_reset_tokens set used_at = now() where token_hash = $1', [
+            tokenHash,
+        ]);
+        return rows[0];
+    });
+
+    await createSession(user.id, user.session_version);
+    return ok({ user: toUser(user) });
+});

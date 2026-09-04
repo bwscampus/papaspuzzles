@@ -1,23 +1,20 @@
-import { NextResponse } from 'next/server';
-import { query, errorResponse } from '@/lib/db';
-import { requireAdminSession } from '@/lib/adminAuth';
+import { handle, ok, readJson } from '@/lib/api';
+import { requireAdmin } from '@/lib/auth';
+import { cancelRedemption, fulfillRedemption } from '@/lib/services/redemptions';
+import { validateEnum, validateUuid } from '@/lib/validate';
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-    const authError = await requireAdminSession();
-    if (authError) return authError;
+export const dynamic = 'force-dynamic';
 
-    try {
-        const { id } = await params;
-        const { status } = await request.json();
+type Ctx = { params: Promise<{ id: string }> };
 
-        if (status !== 'pending_pickup' && status !== 'fulfilled') {
-            return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
-        }
-
-        await query('update redemptions set status = $1 where id = $2', [status, id]);
-
-        return NextResponse.json({ message: 'success' });
-    } catch (error: unknown) {
-        return errorResponse(error);
-    }
-}
+export const POST = handle<Ctx>('admin/redemptions/[id]', async (request, { params }) => {
+    await requireAdmin();
+    const id = validateUuid((await params).id, 'id', 'Pickup');
+    const action = validateEnum(
+        (await readJson(request)).action,
+        ['fulfill', 'cancel'] as const,
+        'action',
+        'Action'
+    );
+    return ok(action === 'fulfill' ? await fulfillRedemption(id) : await cancelRedemption(id));
+});

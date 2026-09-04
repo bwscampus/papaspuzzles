@@ -15,7 +15,9 @@ export async function sendEmail(message: EmailMessage): Promise<{ sent: boolean 
     const from = process.env.EMAIL_FROM || "Papa's Puzzles <onboarding@resend.dev>";
 
     if (!apiKey) {
-        console.log(`[email] RESEND_API_KEY not set; not sending.\nTo: ${message.to}\nSubject: ${message.subject}\n${message.text}`);
+        console.log(
+            `[email] RESEND_API_KEY not set; not sending.\nTo: ${message.to}\nSubject: ${message.subject}\n${message.text}`
+        );
         return { sent: false };
     }
 
@@ -25,7 +27,13 @@ export async function sendEmail(message: EmailMessage): Promise<{ sent: boolean 
             Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ from, to: message.to, subject: message.subject, text: message.text, html: message.html }),
+        body: JSON.stringify({
+            from,
+            to: message.to,
+            subject: message.subject,
+            text: message.text,
+            html: message.html,
+        }),
     });
 
     if (!res.ok) {

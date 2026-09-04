@@ -7,13 +7,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ nam
     const { name } = await params;
     const file = await readUpload(name);
     if (!file) {
-        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        return new NextResponse('Not found', { status: 404 });
     }
 
     return new NextResponse(new Uint8Array(file), {
         headers: {
             'Content-Type': contentTypeFor(name),
             'Content-Length': String(file.length),
+            'Content-Disposition': 'inline',
+            'X-Content-Type-Options': 'nosniff',
             'Cache-Control': 'public, max-age=31536000, immutable',
         },
     });

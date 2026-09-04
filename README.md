@@ -1,83 +1,97 @@
 # Papa's Puzzles
 
-A simple marketplace for families to donate, trade, and request old puzzles.
+Trade your puzzles for exciting new ones! A small marketplace where puzzlers trade in finished puzzles, donate
+puzzles for credits, and spend credits on new ones.
 
-## Tech Stack
-- **Frontend**: Next.js, React, Tailwind CSS, Lucide Icons
-- **Backend**: Next.js API Routes
-- **Database**: PostgreSQL (Railway), accessed with `pg`
-- **Auth**: Email/password accounts stored in Postgres; sessions are signed JWT cookies (`jose`)
-- **Uploads**: Puzzle photos on disk (a Railway volume in production), served from `/uploads/<name>`
-- **Hosting**: Railway
+- Product spec: [overview.md](overview.md)
+- Technical design: [docs/technical-design.md](docs/technical-design.md)
+
+## Stack
+
+Next.js 15 (App Router) · React 18 · TypeScript · Tailwind · PostgreSQL via `pg` · cookie sessions (`jose`) ·
+photos on disk · Railway.
 
 ## Local development
 
-### 1. Install and configure
-
 ```bash
 npm install
-cp .env.local.example .env.local   # then fill in the values
-```
-
-| Variable | Purpose |
-| --- | --- |
-| `DATABASE_URL` | Postgres connection string |
-| `SESSION_SECRET` | Long random string for signing login cookies (`openssl rand -hex 32`) |
-| `UPLOAD_DIR` | Directory for uploaded photos (default `./uploads`) |
-| `APP_URL` | Public URL used in password-reset emails |
-| `RESEND_API_KEY`, `EMAIL_FROM` | Optional. Without them, reset emails are printed to the server log |
-| `DATABASE_SSL` | Optional override (`true`/`false`). Defaults to off for `*.railway.internal` and localhost |
-
-A quick local Postgres:
-
-```bash
+cp .env.local.example .env.local        # fill in SESSION_SECRET and ADMIN_EMAILS
 docker run -d --name pp-pg -e POSTGRES_PASSWORD=pp -e POSTGRES_DB=papaspuzzles -p 5433:5432 postgres:16
-# DATABASE_URL=postgresql://postgres:pp@localhost:5433/papaspuzzles
+npm run migrate                         # applies db/migrations/*.sql
+npm run dev                             # http://localhost:3000
 ```
 
-### 2. Migrate and run
+| Variable         | Purpose                                                                                  |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| `DATABASE_URL`   | Postgres connection string                                                               |
+| `SESSION_SECRET` | Long random string for signing login cookies (`openssl rand -hex 32`)                    |
+| `ADMIN_EMAILS`   | Comma-separated emails whose accounts can open `/admin`                                  |
+| `UPLOAD_DIR`     | Directory for uploaded photos (default `./uploads`)                                      |
+| `APP_URL`        | Public URL used in password-reset emails (required in production)                        |
+| `RESEND_API_KEY` | Optional. Without it, reset links are printed to the server log instead of emailed       |
+| `EMAIL_FROM`     | Optional sender for reset emails                                                         |
+| `DATABASE_SSL`   | Optional `true`/`false` override. Defaults to off for `*.railway.internal` and localhost |
+
+### Commands
+
+| Command            | What it does                                              |
+| ------------------ | --------------------------------------------------------- |
+| `npm run check`    | typecheck + lint + unit tests (what CI runs, minus build) |
+| `npm run test`     | Vitest unit tests (`src/**/*.test.ts`)                    |
+| `npm run format`   | Prettier                                                  |
+| `npm run migrate`  | Apply pending SQL migrations                              |
+| `scripts/smoke.sh` | End-to-end API test against a running app (see below)     |
 
 ```bash
-npm run migrate   # applies db/migrations/*.sql once each (tracked in schema_migrations)
-npm run dev       # http://localhost:3000
+# End-to-end smoke test (creates throwaway accounts; ADMIN_EMAIL must be in ADMIN_EMAILS)
+BASE=http://localhost:3000 ADMIN_EMAIL=founder@example.com scripts/smoke.sh
 ```
 
-## Database
-Schema lives in [db/migrations](db/migrations). Add a new numbered `.sql` file for each change; the
-runner in `scripts/migrate.mjs` applies pending files in order inside a transaction and runs
-automatically before the app starts on Railway.
+## How it works
 
-Tables: `users` (includes `password_hash`), `password_reset_tokens`, `donations`, `requests`, `trades`,
-`redemptions`. Multi-step operations (accepting a donation batch, redeeming credits, bumping user
-counters) are Postgres functions so they run atomically.
+**Accounts are optional.** Guests trade or donate with a name and email. An account (email + password) is
+needed to spend credits and to see My Trades. Everything is keyed by lowercased email, so a guest's history and
+credits appear once they create an account with the same email.
 
-## Railway deployment
-`railway.json` configures the build (Railpack, `npm run build`) and start command
-(`npm run migrate && npm run start`).
+**Trader tier.** An email is _returning_ if it has at least one completed trade or one accepted donation;
+otherwise _new_. The trade form looks this up before sign-in.
 
-One-time setup in a Railway project:
-1. Add a **Postgres** database service.
-2. Add the app service from this GitHub repo (`bwscampus/papaspuzzles`).
-3. Attach a **volume** to the app service, mounted at `/data`.
-4. Set service variables:
-   - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (reference the Postgres service)
-   - `SESSION_SECRET` = a long random string
-   - `UPLOAD_DIR` = `/data/uploads`
-   - `APP_URL` = the app's public URL
-   - `RESEND_API_KEY` and `EMAIL_FROM` once an email provider is set up
-5. Generate a public domain for the app service.
+**Trades.** New traders give 2 puzzles and pick 1; returning traders give 1 and pick 1 (enforced by the
+server). The picked puzzle is reserved immediately. The admin marks the trade completed after hand-off
+(puzzle → traded) or cancels it (puzzle → available again).
 
-Deploys run migrations first, then start Next.js on Railway's `PORT`.
+**Donations.** Puzzles enter review. When the admin accepts a donation, its puzzles go on Explore and credits
+are awarded: a new donor earns (count − 1), everyone else earns 1 per puzzle. Credits live in an email-keyed
+ledger (`credit_entries`).
 
-## Features
-- **Landing Page**: Overview of the platform.
-- **Explore**: Browse listings and request a swap.
-- **Donate**: Submit a batch of puzzles for admin review; credits are awarded on acceptance.
-- **Redeem**: Spend credits on available puzzles.
-- **Request**: Form to request puzzles.
-- **Admin Panel** at `/admin`: review donations, requests, trades, and redemptions; add inventory.
-  Admin auth is currently disabled for alpha testing.
+**Credits.** Signed-in members pick up to `balance` available puzzles. Puzzles are reserved and credits deducted
+atomically; the admin fulfils the pick-up (→ claimed) or cancels it (→ available, credits refunded).
 
-## Notes
-- API routes derive the signed-in user from the session cookie; they never trust a `uid` sent by the browser.
-- The `/api/my-trades` email parameter is only honoured for signed-out visitors.
+**Puzzle statuses:** `pending_review → available → reserved → traded | claimed`, plus `rejected`.
+
+## Code map
+
+```
+src/app/            pages and API routes (api/** use the {ok,data}|{ok,error} envelope)
+src/app/admin/      server-gated admin area (layout.tsx returns 404 for non-admins)
+src/components/     ui primitives, PuzzleForm/PuzzleFormList/PuzzlePicker, AuthDialog, admin tables
+src/lib/            db, session, auth, validate, constants, api envelope, rate limit
+src/lib/services/   all business logic; every mutation runs in a transaction
+src/content/site.ts founder copy from overview.md
+db/migrations/      SQL schema; scripts/migrate.mjs applies it on start
+```
+
+## Deployment (Railway)
+
+The app service builds with Railpack and starts with `npm run start`, which runs migrations and then
+`next start`. Configure:
+
+- Postgres service, referenced by the app as `DATABASE_URL=${{Postgres.DATABASE_URL}}`
+- A volume mounted at `/data` with `UPLOAD_DIR=/data/uploads`
+- `SESSION_SECRET`, `ADMIN_EMAILS`, `APP_URL` (the public domain)
+- `RESEND_API_KEY` + `EMAIL_FROM` once an email provider is set up
+
+**Backups:** Railway snapshots the Postgres volume. For a manual export, use the Postgres service's public URL:
+`pg_dump "$DATABASE_PUBLIC_URL" > backup.sql`. Uploaded photos live on the app volume.
+
+**Admin access:** sign up normally with an email listed in `ADMIN_EMAILS`; the Admin link appears in the nav.

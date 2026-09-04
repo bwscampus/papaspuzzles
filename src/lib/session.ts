@@ -2,24 +2,16 @@ import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
 import { createHash, randomBytes, scrypt as scryptCb, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import { queryOne } from '@/lib/db';
 
 const scrypt = promisify(scryptCb);
 
 const SESSION_COOKIE = 'pp_session';
 const SESSION_DAYS = 30;
 
-export interface SessionUser {
-    uid: string;
-    email: string | null;
-    displayName: string | null;
-    photoURL: null;
-}
-
-interface UserRow {
-    uid: string;
-    email: string | null;
-    display_name: string | null;
+export interface Session {
+    userId: string;
+    /** Must match users.session_version; bumped on password reset to sign out other devices. */
+    version: number;
 }
 
 function secretKey(): Uint8Array {
@@ -53,10 +45,10 @@ export function sha256(value: string): string {
 
 // ---------- Sessions (httpOnly JWT cookie) ----------
 
-export async function createSession(uid: string): Promise<void> {
-    const token = await new SignJWT({})
+export async function createSession(userId: string, version: number): Promise<void> {
+    const token = await new SignJWT({ v: version })
         .setProtectedHeader({ alg: 'HS256' })
-        .setSubject(uid)
+        .setSubject(userId)
         .setIssuedAt()
         .setExpirationTime(`${SESSION_DAYS}d`)
         .sign(secretKey());
@@ -74,26 +66,16 @@ export async function clearSession(): Promise<void> {
     (await cookies()).set(SESSION_COOKIE, '', { maxAge: 0, path: '/' });
 }
 
-/** Returns the uid from a valid session cookie, or null. */
-export async function getSessionUid(): Promise<string | null> {
+/** Returns the session from a valid cookie, or null. Does not touch the database. */
+export async function getSession(): Promise<Session | null> {
     const token = (await cookies()).get(SESSION_COOKIE)?.value;
     if (!token) return null;
     try {
         const { payload } = await jwtVerify(token, secretKey());
-        return typeof payload.sub === 'string' ? payload.sub : null;
+        if (typeof payload.sub !== 'string') return null;
+        const version = typeof payload.v === 'number' ? payload.v : 1;
+        return { userId: payload.sub, version };
     } catch {
         return null;
     }
-}
-
-export function toSessionUser(row: UserRow): SessionUser {
-    return { uid: row.uid, email: row.email, displayName: row.display_name, photoURL: null };
-}
-
-/** Loads the signed-in user from the database, or null when signed out. */
-export async function getSessionUser(): Promise<SessionUser | null> {
-    const uid = await getSessionUid();
-    if (!uid) return null;
-    const row = await queryOne<UserRow>('select uid, email, display_name from users where uid = $1', [uid]);
-    return row ? toSessionUser(row) : null;
 }

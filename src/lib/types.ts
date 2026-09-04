@@ -133,7 +133,8 @@ export interface History {
     redemptions: RedemptionSummary[];
 }
 
-export type ApiErrorCode = 'validation' | 'unauthorized' | 'forbidden' | 'not_found' | 'conflict' | 'internal';
+export type ApiErrorCode =
+    'validation' | 'unauthorized' | 'forbidden' | 'not_found' | 'conflict' | 'internal';
 
 export interface ApiErrorBody {
     code: ApiErrorCode;

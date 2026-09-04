@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server';
-import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import pg, { Pool, type PoolClient, type QueryResultRow } from 'pg';
+
+// Return DATE columns as 'YYYY-MM-DD' strings instead of local-midnight Date objects.
+pg.types.setTypeParser(1082, (value) => value);
 
 let pool: Pool | null = null;
 
@@ -23,19 +25,24 @@ export function getPool(): Pool {
     return pool;
 }
 
+/** Anything that can run a query: the pool or a transaction client. */
+export type Queryable = Pick<PoolClient, 'query'>;
+
 export async function query<T extends QueryResultRow = QueryResultRow>(
     text: string,
-    params: unknown[] = []
+    params: unknown[] = [],
+    client: Queryable = getPool()
 ): Promise<T[]> {
-    const { rows } = await getPool().query<T>(text, params);
+    const { rows } = await client.query<T>(text, params);
     return rows;
 }
 
 export async function queryOne<T extends QueryResultRow = QueryResultRow>(
     text: string,
-    params: unknown[] = []
+    params: unknown[] = [],
+    client: Queryable = getPool()
 ): Promise<T | null> {
-    const rows = await query<T>(text, params);
+    const rows = await query<T>(text, params, client);
     return rows[0] ?? null;
 }
 
@@ -54,43 +61,7 @@ export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>)
     }
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export function isUuid(value: unknown): value is string {
-    return typeof value === 'string' && UUID_RE.test(value);
-}
-
-export function toPieces(value: unknown): number | null {
-    if (value === '' || value === null || value === undefined) return null;
-    const n = Number(value);
-    return Number.isFinite(n) ? Math.trunc(n) : null;
-}
-
-interface PgError {
-    code?: string;
-    message?: string;
-}
-
-/** Map Postgres error codes (including our custom RAISE codes) to HTTP statuses. */
-export function errorStatus(error: PgError | null | undefined, fallback = 400): number {
-    switch (error?.code) {
-        case 'P0002': // not found (custom)
-            return 404;
-        case 'P0003': // conflict (custom)
-        case '23505': // unique violation
-            return 409;
-        case 'P0001': // validation (custom)
-        case '22P02': // invalid text representation (e.g. bad uuid)
-        case '23502': // not null violation
-        case '23503': // foreign key violation
-            return 400;
-        default:
-            return fallback;
-    }
-}
-
-export function errorResponse(error: unknown, fallback = 400): NextResponse {
-    const pg = (error ?? {}) as PgError;
-    const message = pg.message ?? (error instanceof Error ? error.message : 'Unknown error');
-    return NextResponse.json({ error: message }, { status: errorStatus(pg, fallback) });
+export function iso(value: Date | string | null | undefined): string | null {
+    if (!value) return null;
+    return value instanceof Date ? value.toISOString() : String(value);
 }

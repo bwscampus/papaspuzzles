@@ -25,7 +25,8 @@ export class ApiError extends Error {
     }
 }
 
-export const validationError = (message: string, field?: string) => new ApiError('validation', message, field);
+export const validationError = (message: string, field?: string) =>
+    new ApiError('validation', message, field);
 export const notFound = (message = 'Not found') => new ApiError('not_found', message);
 export const conflict = (message: string) => new ApiError('conflict', message);
 export const unauthorized = (message = 'Please sign in.') => new ApiError('unauthorized', message);
@@ -88,7 +89,9 @@ export function handle<Ctx = unknown>(name: string, fn: Handler<Ctx>): Handler<C
 export async function readJson(request: Request): Promise<Record<string, unknown>> {
     try {
         const body = await request.json();
-        return body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
+        return body && typeof body === 'object' && !Array.isArray(body)
+            ? (body as Record<string, unknown>)
+            : {};
     } catch {
         return {};
     }

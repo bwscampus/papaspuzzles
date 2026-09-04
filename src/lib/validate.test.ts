@@ -73,7 +73,9 @@ describe('validatePuzzleInput', () => {
         expect(() => validatePuzzleInput({ ...goodPuzzle, imageUrl: 'https://evil.example/x.png' })).toThrow(
             /upload a photo/
         );
-        expect(() => validatePuzzleInput({ ...goodPuzzle, imageUrl: '/uploads/../secret' })).toThrow(ApiError);
+        expect(() => validatePuzzleInput({ ...goodPuzzle, imageUrl: '/uploads/../secret' })).toThrow(
+            ApiError
+        );
     });
 });
 

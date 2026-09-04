@@ -1,225 +1,130 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import Navbar from "@/components/Navbar";
-import { Search, Upload } from "lucide-react";
-import { Donation } from "@/types/puzzle";
-
-const PIECE_OPTIONS = ["All", "100", "300", "500", "1000", "2000+"];
-const DIFFICULTY_OPTIONS = ["All", "easy", "medium", "hard"];
+import { useEffect, useState } from 'react';
+import { PageShell } from '@/components/PageShell';
+import { PuzzleCard } from '@/components/PuzzleCard';
+import { PuzzleFilters, type Filters } from '@/components/PuzzleFilters';
+import { Alert } from '@/components/ui/Alert';
+import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Spinner } from '@/components/ui/Spinner';
+import { useAuth } from '@/context/AuthContext';
+import { api, errorMessage } from '@/lib/client/api';
+import type { PublicPuzzle } from '@/lib/types';
 
 export default function ExplorePage() {
-    const [inventory, setInventory] = useState<Donation[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [fetchError, setFetchError] = useState<string | null>(null);
-    const [themeOptions, setThemeOptions] = useState<string[]>(["All"]);
-    const [filterPieces, setFilterPieces] = useState("All");
-    const [filterTheme, setFilterTheme] = useState("All");
-    const [filterDifficulty, setFilterDifficulty] = useState("All");
-
-    const fetchInventory = useCallback(async () => {
-        setLoading(true);
-        setFetchError(null);
-        try {
-            const res = await fetch("/api/inventory", { cache: "no-store" });
-            const data = await res.json();
-            if (!res.ok) {
-                console.error("Inventory API error:", data.error);
-                setFetchError(data.error || "Failed to load puzzles");
-            } else {
-                setInventory(data.data || []);
-            }
-        } catch (err) {
-            console.error("Failed to load inventory", err);
-            setFetchError("Network error — please try again.");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    const fetchThemes = useCallback(async () => {
-        try {
-            const res = await fetch("/api/themes", { cache: "no-store" });
-            const data = await res.json();
-            if (!res.ok) return;
-
-            const themes = Array.isArray(data.data) ? data.data.filter((theme: unknown): theme is string => typeof theme === "string" && theme.trim().length > 0) : [];
-            const nextOptions = ["All", ...themes];
-            setThemeOptions(nextOptions);
-
-            setFilterTheme((previousTheme) => (
-                nextOptions.some((theme) => theme.toLowerCase() === previousTheme.toLowerCase()) ? previousTheme : "All"
-            ));
-        } catch (err) {
-            console.error("Failed to load themes", err);
-        }
-    }, []);
+    const { user } = useAuth();
+    const [filters, setFilters] = useState<Filters>({ theme: '', pieces: '' });
+    const [puzzles, setPuzzles] = useState<PublicPuzzle[] | null>(null);
+    const [error, setError] = useState('');
+    const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
-        const loadData = async () => {
-            await Promise.all([fetchInventory(), fetchThemes()]);
+        let cancelled = false;
+        const params = new URLSearchParams();
+        if (filters.theme) params.set('theme', filters.theme);
+        if (filters.pieces) params.set('pieces', filters.pieces);
+        setError('');
+        api.get<PublicPuzzle[]>(`/api/puzzles?${params}`)
+            .then((data) => {
+                if (!cancelled) setPuzzles(data);
+            })
+            .catch((err) => {
+                if (!cancelled) setError(errorMessage(err));
+            });
+        return () => {
+            cancelled = true;
         };
-
-        void loadData();
-    }, [fetchInventory, fetchThemes]);
-
-    const filtered = inventory.filter(puzzle => {
-        if (filterPieces !== "All" && String(puzzle.pieces) !== filterPieces) return false;
-        if (filterTheme !== "All" && (puzzle.theme || "").toLowerCase() !== filterTheme.toLowerCase()) return false;
-        if (filterDifficulty !== "All" && puzzle.difficulty !== filterDifficulty) return false;
-        return true;
-    });
+    }, [filters, reloadKey]);
 
     return (
-        <div className="min-h-screen bg-background">
-            <Navbar />
+        <PageShell
+            title="Explore"
+            subtitle="Every puzzle here is available right now. Pick one to start a trade, or use your credits."
+            width="wide"
+        >
+            <PuzzleFilters value={filters} onChange={setFilters} />
 
-            <main className="max-w-7xl mx-auto p-8">
-                <div className="text-center mb-8 space-y-4">
-                    <h1 className="text-4xl font-bold text-primary">Explore Puzzles</h1>
-                    <p className="text-xl text-gray-600">Discover your next challenge from our community collection.</p>
-                </div>
-
-                {/* Filter Bar */}
-                <div className="flex flex-wrap gap-4 mb-8 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                    <div className="flex items-center gap-2">
-                        <Search className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-600">Filter:</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-500">Pieces:</label>
-                        <select
-                            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-primary outline-none bg-white"
-                            value={filterPieces}
-                            onChange={(e) => setFilterPieces(e.target.value)}
+            <div className="mt-8">
+                {error ? (
+                    <Alert tone="error" title="Could not load puzzles">
+                        <p>{error}</p>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-3"
+                            onClick={() => setReloadKey((k) => k + 1)}
                         >
-                            {PIECE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
+                            Try again
+                        </Button>
+                    </Alert>
+                ) : puzzles === null ? (
+                    <div className="flex justify-center py-20 text-primary">
+                        <Spinner className="h-8 w-8" />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-500">Theme:</label>
-                        <select
-                            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-primary outline-none bg-white"
-                            value={filterTheme}
-                            onChange={(e) => setFilterTheme(e.target.value)}
-                        >
-                            {themeOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-500">Difficulty:</label>
-                        <select
-                            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-primary outline-none bg-white"
-                            value={filterDifficulty}
-                            onChange={(e) => setFilterDifficulty(e.target.value)}
-                        >
-                            {DIFFICULTY_OPTIONS.map(o => <option key={o} value={o}>{o === "All" ? "All" : o.charAt(0).toUpperCase() + o.slice(1)}</option>)}
-                        </select>
-                    </div>
-                    {(filterPieces !== "All" || filterTheme !== "All" || filterDifficulty !== "All") && (
-                        <button
-                            onClick={() => { setFilterPieces("All"); setFilterTheme("All"); setFilterDifficulty("All"); }}
-                            className="text-sm text-primary hover:underline"
-                        >
-                            Clear filters
-                        </button>
-                    )}
-                </div>
-
-                {loading ? (
-                    <div className="text-center py-20 text-gray-500">Loading puzzles...</div>
-                ) : fetchError ? (
-                    <div className="text-center py-20">
-                        <p className="text-red-500 text-lg font-medium">Failed to load puzzles</p>
-                        <p className="text-gray-400 mt-1 text-sm">{fetchError}</p>
-                        <button
-                            onClick={fetchInventory}
-                            className="inline-block mt-4 px-6 py-2.5 bg-primary text-white rounded-full font-bold hover:bg-red-400 transition-colors"
-                        >
-                            Try Again
-                        </button>
-                    </div>
+                ) : puzzles.length === 0 ? (
+                    <EmptyState
+                        title={
+                            filters.theme || filters.pieces
+                                ? 'No puzzles match those filters'
+                                : 'No puzzles yet'
+                        }
+                        text={
+                            filters.theme || filters.pieces
+                                ? 'Try clearing a filter.'
+                                : 'Be the first to donate one and earn credits.'
+                        }
+                        action={
+                            filters.theme || filters.pieces ? (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setFilters({ theme: '', pieces: '' })}
+                                >
+                                    Clear filters
+                                </Button>
+                            ) : (
+                                <Button href="/donate">Donate a puzzle</Button>
+                            )
+                        }
+                    />
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {filtered.map((puzzle) => (
-                            <div
-                                key={puzzle.id}
-                                className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100 group flex flex-col"
-                            >
-                                <div className="h-48 bg-gray-100 relative overflow-hidden shrink-0">
-                                    {puzzle.image_url && (puzzle.image_url.startsWith('http') || puzzle.image_url.startsWith('/')) ? (
-                                        <img
-                                            src={puzzle.image_url}
-                                            alt={puzzle.name}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                            <Upload className="w-10 h-10" />
-                                        </div>
-                                    )}
-                                    <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-md text-xs font-bold shadow-sm text-gray-700">
-                                        {puzzle.pieces} pcs
-                                    </div>
-                                    {puzzle.difficulty && (
-                                        <div className={`absolute top-2 left-2 px-2 py-1 rounded-md text-xs font-bold shadow-sm text-white ${puzzle.difficulty === 'easy' ? 'bg-green-400' :
-                                            puzzle.difficulty === 'medium' ? 'bg-yellow-400' : 'bg-red-400'
-                                            }`}>
-                                            {puzzle.difficulty.toUpperCase()}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="p-4 flex flex-col flex-grow">
-                                    <h3 className="font-bold text-gray-800 truncate text-lg mb-1">{puzzle.name}</h3>
-                                    <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
-                                        <span>{puzzle.theme}</span>
-                                        <span className={`px-2 py-0.5 rounded-full text-xs ${puzzle.condition === 'new' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                                            }`}>
-                                            {puzzle.condition}
-                                        </span>
-                                    </div>
-
-                                    <div className="mt-auto">
-                                        <a
-                                            href={`/trade?wanted=${puzzle.id}`}
-                                            className="block w-full text-center py-2.5 bg-secondary text-gray-900 font-bold rounded-lg hover:bg-green-300 transition-colors"
-                                        >
-                                            Start a Trade
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-
-                        {filtered.length === 0 && !loading && (
-                            <div className="col-span-full text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
-                                <div className="text-4xl mb-4">🧩</div>
-                                {inventory.length === 0 ? (
-                                    <>
-                                        <p className="text-gray-500 text-lg font-medium">No puzzles available yet</p>
-                                        <p className="text-gray-400 mt-1">Be the first to donate one and start the swap!</p>
-                                        <a href="/trade" className="inline-block mt-4 px-6 py-2.5 bg-primary text-white rounded-full font-bold hover:bg-red-400 transition-colors">
-                                            Donate a Puzzle
-                                        </a>
-                                    </>
-                                ) : (
-                                    <>
-                                        <p className="text-gray-500 text-lg font-medium">No puzzles match your filters</p>
-                                        <p className="text-gray-400 mt-1">Try adjusting or clearing your filters.</p>
-                                        <button
-                                            onClick={() => { setFilterPieces("All"); setFilterTheme("All"); setFilterDifficulty("All"); }}
-                                            className="inline-block mt-4 px-6 py-2.5 bg-primary text-white rounded-full font-bold hover:bg-red-400 transition-colors"
-                                        >
-                                            Clear Filters
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                    <>
+                        <p className="mb-4 text-sm text-muted" aria-live="polite">
+                            {puzzles.length} puzzle{puzzles.length === 1 ? '' : 's'} available
+                        </p>
+                        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            {puzzles.map((p) => (
+                                <li key={p.id}>
+                                    <PuzzleCard
+                                        puzzle={p}
+                                        action={
+                                            <div className="flex flex-col gap-2">
+                                                <Button
+                                                    href={`/trade?wanted=${p.id}`}
+                                                    size="sm"
+                                                    className="w-full"
+                                                >
+                                                    Start a Trade
+                                                </Button>
+                                                {user && (
+                                                    <Button
+                                                        href={`/credits?pick=${p.id}`}
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="w-full"
+                                                    >
+                                                        Use credits
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        }
+                                    />
+                                </li>
+                            ))}
+                        </ul>
+                    </>
                 )}
-            </main>
-        </div>
+            </div>
+        </PageShell>
     );
 }

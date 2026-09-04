@@ -20,7 +20,10 @@ describe('toErrorBody', () => {
         });
     });
     it('hides Postgres details', () => {
-        const body = toErrorBody({ code: '23505', message: 'duplicate key value violates "users_email_lower_idx"' });
+        const body = toErrorBody({
+            code: '23505',
+            message: 'duplicate key value violates "users_email_lower_idx"',
+        });
         expect(body.code).toBe('conflict');
         expect(body.message).not.toMatch(/users_email/);
         expect(toErrorBody({ code: '23514', message: 'check constraint' }).code).toBe('validation');
@@ -45,6 +48,9 @@ describe('handle', () => {
             throw new ApiError('not_found', 'Puzzle not found');
         })(req, {});
         expect(res.status).toBe(404);
-        expect(await res.json()).toEqual({ ok: false, error: { code: 'not_found', message: 'Puzzle not found' } });
+        expect(await res.json()).toEqual({
+            ok: false,
+            error: { code: 'not_found', message: 'Puzzle not found' },
+        });
     });
 });
