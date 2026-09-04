@@ -32,11 +32,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Legacy server artifacts
-server/puzzles.db
-server/*.db
-server/test_image.jpg
-server/uploads/
 .env*
 !.env*.example
 /uploads/
