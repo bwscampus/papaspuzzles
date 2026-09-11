@@ -78,8 +78,8 @@ export async function submitTrade(input: SubmitTradeInput): Promise<{ tradeId: s
         if (input.givenPuzzles.length !== status.requiredGiven) {
             throw validationError(
                 status.returning
-                    ? 'Returning traders trade one puzzle for one.'
-                    : 'New traders trade two puzzles for one.',
+                    ? 'You have already added a puzzle, so you trade one for one.'
+                    : 'Traders who have not added a puzzle yet give two puzzles for one.',
                 'givenPuzzles'
             );
         }
@@ -137,6 +137,12 @@ export async function completeTrade(id: string): Promise<TradeSummary> {
             id,
         ]);
         await client.query(`update puzzles set status = 'traded' where id = $1`, [trade.received_puzzle_id]);
+        // The admin has the given puzzles in hand at hand-off, so they count as added to the site.
+        await client.query(
+            `update puzzles set status = 'available', reviewed_at = now()
+             where given_in_trade_id = $1 and status = 'pending_review'`,
+            [id]
+        );
         const [summary] = await toSummaries(
             [{ ...trade, status: 'completed', completed_at: new Date() }],
             client

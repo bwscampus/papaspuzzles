@@ -30,13 +30,13 @@ The founder's original text (mission, values, story, phrase, quote, contact) is 
 
 ### 3.1 Definitions
 
-| Term          | Definition                                                                                                                                                                                                |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Puzzle        | name, pieces (100 / 300 / 500 / 1000 / 2000+), theme (Animals, Landscape, Art, Food, Cityscape, Movies, Other), condition (new / good / fair), photo. **No difficulty.**                                  |
-| Puzzle status | `pending_review` → `available` → `reserved` → `traded` or `claimed`; plus `rejected`. Explore shows only `available`.                                                                                     |
-| Account       | Optional. Email + password. Needed to spend credits and to view My Trades. Identity for all activity is the lowercased email, so guest activity attaches to an account created later with the same email. |
-| Trader tier   | **new** = no completed trade and no accepted donation batch under this email. **returning** = at least one of either. Computed by email, so it works before sign-in.                                      |
-| Credit        | 1 credit claims 1 available puzzle. Credits do not expire.                                                                                                                                                |
+| Term          | Definition                                                                                                                                                                                                                                                                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Puzzle        | name, pieces (100 / 300 / 500 / 1000 / 2000+), theme (Animals, Landscape, Art, Food, Cityscape, Movies, Other), condition (new / good / fair), photo. **No difficulty.**                                                                                                                                                                 |
+| Puzzle status | `pending_review` → `available` → `reserved` → `traded` or `claimed`; plus `rejected`. Explore shows only `available`.                                                                                                                                                                                                                    |
+| Account       | Optional. Email + password. Needed to spend credits and to view My Trades. Identity for all activity is the lowercased email, so guest activity attaches to an account created later with the same email.                                                                                                                                |
+| Trader tier   | **new** = no approved puzzle from this email yet (puzzles_added = 0). **returning** = puzzles_added ≥ 1. Per-email SQL functions `puzzles_added` (approved puzzles submitted) and `puzzles_taken` (completed trades + fulfilled pick-ups). Completing a trade approves the given puzzles. Computed by email, so it works before sign-in. |
+| Credit        | 1 credit claims 1 available puzzle. Credits do not expire.                                                                                                                                                                                                                                                                               |
 
 ### 3.2 Rules
 

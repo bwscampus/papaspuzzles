@@ -75,13 +75,16 @@ export function TraderStatusNotice({
         );
     }
 
+    const { puzzlesAdded } = lookup.status;
     return lookup.status.returning ? (
         <Alert tone="success" title="Welcome back!">
-            Returning traders trade one puzzle for one.
+            You have added {puzzlesAdded} puzzle{puzzlesAdded === 1 ? '' : 's'} to the site, so you trade one
+            for one.
         </Alert>
     ) : (
-        <Alert tone="info" title="First trade?">
-            New traders give two puzzles and pick one. After your first trade you will trade one for one.
+        <Alert tone="info" title="First puzzle?">
+            Traders who have not added a puzzle yet give two and pick one. Once one of your puzzles is
+            approved, you trade one for one.
         </Alert>
     );
 }

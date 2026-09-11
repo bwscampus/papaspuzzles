@@ -38,8 +38,11 @@ export interface User {
 }
 
 export interface TraderStatus {
+    /** True once at least one puzzle from this email has been approved onto the site. */
     returning: boolean;
     requiredGiven: 1 | 2;
+    puzzlesAdded: number;
+    puzzlesTaken: number;
 }
 
 /** What Explore and the pickers see. Never includes submitter data. */
@@ -122,6 +125,8 @@ export interface AdminUser {
     displayName: string | null;
     createdAt: string;
     creditBalance: number;
+    puzzlesAdded: number;
+    puzzlesTaken: number;
     completedTrades: number;
     acceptedBatches: number;
     returning: boolean;
@@ -129,6 +134,7 @@ export interface AdminUser {
 }
 
 export interface History {
+    stats: TraderStatus;
     trades: TradeSummary[];
     donations: DonationBatchSummary[];
     redemptions: RedemptionSummary[];

@@ -259,7 +259,7 @@ function TradeWizard() {
                 <form onSubmit={goToPick} noValidate className="flex flex-col gap-6">
                     <Alert tone="info">
                         {requiredGiven === 2
-                            ? 'As a new trader, tell us about the two puzzles you are giving.'
+                            ? 'You have not added a puzzle yet, so tell us about the two puzzles you are giving.'
                             : 'Tell us about the puzzle you are giving.'}
                     </Alert>
                     {countNotice && (

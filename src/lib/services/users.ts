@@ -1,6 +1,7 @@
 import { isAdminEmail } from '@/lib/auth';
 import { getCreditBalance } from '@/lib/credits';
 import { iso, query } from '@/lib/db';
+import { getTraderStatus } from '@/lib/trader';
 import type { AdminUser, CreditEntry, History } from '@/lib/types';
 import { listBatchesForEmail } from './donations';
 import { listRedemptionsForEmail } from './redemptions';
@@ -12,6 +13,8 @@ interface AdminUserRow {
     display_name: string | null;
     created_at: Date;
     credit_balance: number;
+    puzzles_added: number;
+    puzzles_taken: number;
     completed_trades: number;
     accepted_batches: number;
     returning: boolean;
@@ -21,6 +24,8 @@ export async function adminListUsers(): Promise<AdminUser[]> {
     const rows = await query<AdminUserRow>(`
         select u.id, u.email, u.display_name, u.created_at,
                credit_balance(u.email) as credit_balance,
+               puzzles_added(u.email) as puzzles_added,
+               puzzles_taken(u.email) as puzzles_taken,
                (select count(*)::int from trades t
                  where lower(t.trader_email) = lower(u.email) and t.status = 'completed') as completed_trades,
                (select count(*)::int from donation_batches b
@@ -34,6 +39,8 @@ export async function adminListUsers(): Promise<AdminUser[]> {
         displayName: r.display_name,
         createdAt: iso(r.created_at) as string,
         creditBalance: r.credit_balance,
+        puzzlesAdded: r.puzzles_added,
+        puzzlesTaken: r.puzzles_taken,
         completedTrades: r.completed_trades,
         acceptedBatches: r.accepted_batches,
         returning: r.returning,
@@ -83,10 +90,11 @@ export async function getCredits(email: string): Promise<{ balance: number; entr
 }
 
 export async function getHistory(email: string): Promise<History> {
-    const [trades, donations, redemptions] = await Promise.all([
+    const [stats, trades, donations, redemptions] = await Promise.all([
+        getTraderStatus(email),
         listTradesForEmail(email),
         listBatchesForEmail(email),
         listRedemptionsForEmail(email),
     ]);
-    return { trades, donations, redemptions };
+    return { stats, trades, donations, redemptions };
 }
