@@ -7,6 +7,8 @@ export const SITE = {
     quote: 'Every finished puzzle deserves a second life, and every puzzler deserves a new challenge.',
     contactEmail: 'info@papaspuzzles.org',
     founder: { name: 'Berkeley Katz', title: "Papa's Puzzles Founder", photo: '/founder.jpg' },
+    disclaimer:
+        "Papa's Puzzles operates on trust. If you receive a puzzle with missing pieces, please let us know by email at",
 } as const;
 
 export const STEPS = [

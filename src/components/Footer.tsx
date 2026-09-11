@@ -4,7 +4,17 @@ import { SITE } from '@/content/site';
 export function Footer() {
     return (
         <footer className="mt-16 border-t border-rose/30 bg-white">
-            <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm text-muted sm:flex-row sm:px-6 lg:px-8">
+            <p className="mx-auto max-w-7xl px-4 pt-6 text-center text-xs text-muted sm:px-6 lg:px-8">
+                {SITE.disclaimer}{' '}
+                <a
+                    href={`mailto:${SITE.contactEmail}`}
+                    className="font-semibold text-primary hover:underline"
+                >
+                    {SITE.contactEmail}
+                </a>
+                .
+            </p>
+            <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-6 text-sm text-muted sm:flex-row sm:px-6 lg:px-8">
                 <p>
                     © {new Date().getFullYear()} {SITE.name}. {SITE.phrase}
                 </p>
