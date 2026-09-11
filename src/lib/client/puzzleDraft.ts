@@ -1,4 +1,11 @@
-import { CONDITIONS, MAX_NAME_LENGTH, PIECES, THEMES, UPLOAD_URL_PREFIX } from '@/lib/constants';
+import {
+    CONDITIONS,
+    CONDITION_NA,
+    MAX_NAME_LENGTH,
+    PIECES,
+    THEMES,
+    UPLOAD_URL_PREFIX,
+} from '@/lib/constants';
 import type { Condition, Pieces, PuzzleInput, Theme } from '@/lib/types';
 
 /** Form state for one puzzle before it is validated into a PuzzleInput. */
@@ -7,6 +14,7 @@ export interface PuzzleDraft {
     name: string;
     pieces: string;
     theme: string;
+    /** Not collected by any form; kept so existing puzzles can be edited without losing it. */
     condition: string;
     imageUrl: string;
 }
@@ -15,15 +23,21 @@ export type DraftErrors = Partial<Record<keyof Omit<PuzzleDraft, 'key'>, string>
 
 let counter = 0;
 
-export function emptyDraft(): PuzzleDraft {
+export function emptyDraft(overrides: Partial<Omit<PuzzleDraft, 'key'>> = {}): PuzzleDraft {
     return {
         key: `draft-${++counter}-${Date.now()}`,
         name: '',
         pieces: '',
         theme: '',
-        condition: 'good',
+        condition: CONDITION_NA,
         imageUrl: '',
+        ...overrides,
     };
+}
+
+/** A draft with no user-entered data yet (safe to drop when the required count shrinks). */
+export function isDraftEmpty(draft: PuzzleDraft): boolean {
+    return !draft.name.trim() && !draft.pieces && !draft.theme && !draft.imageUrl;
 }
 
 /** Client-side mirror of validatePuzzleInput so users get inline errors before a round trip. */
@@ -34,7 +48,11 @@ export function validateDraft(draft: PuzzleDraft): DraftErrors {
         errors.name = `Keep it under ${MAX_NAME_LENGTH} characters.`;
     if (!PIECES.includes(Number(draft.pieces) as Pieces)) errors.pieces = 'Choose a piece count.';
     if (!THEMES.includes(draft.theme as Theme)) errors.theme = 'Choose a theme.';
-    if (!CONDITIONS.includes(draft.condition as Condition)) errors.condition = 'Choose a condition.';
+    const conditionOk =
+        draft.condition === '' ||
+        draft.condition === CONDITION_NA ||
+        CONDITIONS.includes(draft.condition as (typeof CONDITIONS)[number]);
+    if (!conditionOk) errors.condition = 'Invalid condition.';
     if (!draft.imageUrl.startsWith(UPLOAD_URL_PREFIX))
         errors.imageUrl = 'Please upload a photo of the puzzle.';
     return errors;
@@ -45,7 +63,7 @@ export function draftToInput(draft: PuzzleDraft): PuzzleInput {
         name: draft.name.trim(),
         pieces: Number(draft.pieces) as Pieces,
         theme: draft.theme as Theme,
-        condition: draft.condition as Condition,
+        condition: (draft.condition || CONDITION_NA) as Condition,
         imageUrl: draft.imageUrl,
     };
 }

@@ -47,8 +47,8 @@ export default function AdminInventoryPage() {
                 <Card>
                     <h2 className="mb-1 text-xl">Add a puzzle to inventory</h2>
                     <p className="mb-6 text-sm text-muted">
-                        Same details as a donation, without any personal information. It goes live
-                        immediately.
+                        Name, pieces, theme, and a photo. No personal information and no condition. It goes
+                        live immediately.
                     </p>
                     <PuzzleForm value={draft} onChange={setDraft} errors={errors} />
                     <div className="mt-6 flex justify-end">

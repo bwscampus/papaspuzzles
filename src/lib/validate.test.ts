@@ -111,3 +111,16 @@ describe('dates and slots', () => {
         expect(() => validateDropoffSlot('15:00')).toThrow(ApiError);
     });
 });
+
+describe('condition (not collected by any form)', () => {
+    const base = { ...goodPuzzle };
+    it('defaults to n/a when omitted, empty, or n/a', () => {
+        expect(validatePuzzleInput({ ...base, condition: undefined }).condition).toBe('n/a');
+        expect(validatePuzzleInput({ ...base, condition: '' }).condition).toBe('n/a');
+        expect(validatePuzzleInput({ ...base, condition: 'n/a' }).condition).toBe('n/a');
+    });
+    it('still accepts and rejects explicit values', () => {
+        expect(validatePuzzleInput({ ...base, condition: 'good' }).condition).toBe('good');
+        expect(() => validatePuzzleInput({ ...base, condition: 'mint' })).toThrow(ApiError);
+    });
+});

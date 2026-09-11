@@ -69,17 +69,17 @@ STATUS=$(curl -s -o "$TMP/body" -w '%{http_code}' -X POST "$BASE/api/upload" -F 
 check "html disguised as png 400" 400 "$STATUS"
 check "traversal 404" 404 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/uploads/..%2F..%2Fpackage.json")"
 
-P() { echo "{\"name\":\"$1\",\"pieces\":$2,\"theme\":\"$3\",\"condition\":\"good\",\"imageUrl\":\"$IMG\"}"; }
+P() { echo "{\"name\":\"$1\",\"pieces\":$2,\"theme\":\"$3\",\"imageUrl\":\"$IMG\"}"; }
 
 echo "== donations and credits"
-call POST /api/donations "" "{\"name\":\"Guest Person\",\"email\":\"$GUEST\",\"puzzles\":[$(P 'Smoke A' 500 Animals),$(P 'Smoke B' 1000 Art)]}"
+call POST /api/donations "" "{\"name\":\"Guest Person\",\"email\":\"$GUEST\",\"puzzles\":[$(P "Smoke A $RUN" 500 Animals),$(P "Smoke B $RUN" 1000 Art)]}"
 check "guest donation 201" 201 "$STATUS"
 check "new donor estimate = count-1" 1 "$(field data.estimatedCredits)"
 call POST /api/donations "" "{\"name\":\"X\",\"email\":\"$GUEST\",\"puzzles\":[{\"name\":\"Bad\",\"pieces\":750,\"theme\":\"Art\",\"condition\":\"good\",\"imageUrl\":\"$IMG\"}]}"
 check "invalid pieces 400" 400 "$STATUS"
 check "field path reported" "puzzles.0.pieces" "$(field error.field)"
 call GET /api/puzzles ""
-check "pending puzzles not public" 0 "$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).data.filter(p=>p.name.startsWith("Smoke")).length))')"
+check "pending puzzles not public" 0 "$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).data.filter(p=>p.name.endsWith(" "+process.argv[1])).length))' "$RUN")"
 call GET "/api/admin/donation-batches?status=pending_review" "$A"
 BATCH=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const b=JSON.parse(s).data.find(b=>b.donorEmail===process.argv[1]);console.log(b?b.id:"")})' "$GUEST")
 check "batch listed" "true" "$([ -n "$BATCH" ] && echo true || echo false)"
@@ -93,7 +93,7 @@ call GET /api/puzzles ""
 check "public list has no emails" "" "$(echo "$BODY" | grep -o 'example.com' | head -1)"
 call GET "/api/trader-status?email=$GUEST" ""
 check "donor is now returning" "true" "$(field data.returning)"
-call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"puzzles\":[$(P 'Smoke C' 300 Food)]}"
+call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"puzzles\":[$(P "Smoke C $RUN" 300 Food)]}"
 check "returning donor estimate = count" 1 "$(field data.estimatedCredits)"
 BATCH2=$(field data.batchId)
 call POST "/api/admin/donation-batches/$BATCH2" "$A" '{"action":"accept"}'
@@ -103,7 +103,7 @@ check "balance = 2" 2 "$(field data.balance)"
 
 echo "== trades"
 call GET /api/puzzles ""
-WANT=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).data.find(p=>p.name==="Smoke A").id))')
+WANT=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).data.find(p=>p.name==="Smoke A "+process.argv[1]).id))' "$RUN")
 call GET "/api/trader-status?email=$TRADER" ""
 check "fresh trader is new (needs 2)" 2 "$(field data.requiredGiven)"
 TRADE_BASE="\"name\":\"Trader\",\"email\":\"$TRADER\",\"wantedPuzzleId\":\"$WANT\",\"dropoffDate\":\"2099-01-05\",\"dropoffSlot\":\"14:00\""
@@ -124,8 +124,12 @@ check "complete trade 200" 200 "$STATUS"
 check "received puzzle traded" "traded" "$(curl -s -b "$A" "$BASE/api/admin/puzzles?status=traded" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const p=JSON.parse(s).data.find(p=>p.id===process.argv[1]);console.log(p?p.status:"")})' "$WANT")"
 call GET "/api/trader-status?email=$TRADER" ""
 check "trader now returning (needs 1)" 1 "$(field data.requiredGiven)"
+check "given puzzles approved on completion" 2 "$(curl -s -b "$A" "$BASE/api/admin/trades?status=completed" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s).data.find(t=>t.id===process.argv[1]);console.log(t?t.given.filter(g=>g.status==="available").length:"")})' "$TRADE")"
+check "puzzlesAdded counted" 2 "$(field data.puzzlesAdded)"
+call POST /api/trades "" "{\"name\":\"Trader\",\"email\":\"$TRADER\",\"wantedPuzzleId\":\"$WANT\",\"dropoffDate\":\"2099-01-05\",\"dropoffSlot\":\"10:00\",\"givenPuzzles\":[$(P G 500 Movies),$(P G 500 Movies)]}"
+check "returning trader with 2 puzzles 400" 400 "$STATUS"
 call GET /api/puzzles ""
-WANT2=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).data.find(p=>p.name==="Smoke B").id))')
+WANT2=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).data.find(p=>p.name==="Smoke B "+process.argv[1]).id))' "$RUN")
 call POST /api/trades "" "{\"name\":\"Trader\",\"email\":\"$TRADER\",\"wantedPuzzleId\":\"$WANT2\",\"dropoffDate\":\"2099-01-05\",\"dropoffSlot\":\"10:00\",\"givenPuzzles\":[$(P 'Given 3' 300 Other)]}"
 check "returning trader 1-for-1 201" 201 "$STATUS"
 TRADE2=$(field data.tradeId)
@@ -137,7 +141,7 @@ check "given puzzle rejected on cancel" "rejected" "$(echo "$BODY" >/dev/null; c
 
 echo "== credits spend"
 call GET /api/puzzles ""
-IDS=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.stringify(JSON.parse(s).data.filter(p=>["Smoke B","Smoke C"].includes(p.name)).map(p=>p.id))))')
+IDS=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.stringify(JSON.parse(s).data.filter(p=>["Smoke B "+process.argv[1],"Smoke C "+process.argv[1]].includes(p.name)).map(p=>p.id))))' "$RUN")
 ONE=$(echo "$IDS" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s)[0]))')
 call POST /api/redemptions "$U" "{\"puzzleIds\":[\"$ONE\",\"$ONE\",\"00000000-0000-4000-8000-000000000000\",\"00000000-0000-4000-8000-000000000001\"]}"
 check "redeem beyond balance 400" 400 "$STATUS"
@@ -162,9 +166,10 @@ check "history: 2 donations" 2 "$(echo "$BODY" | json data.donations | node -e '
 check "history: 2 redemptions" 2 "$(echo "$BODY" | json data.redemptions | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).length))')"
 
 echo "== admin inventory and users"
-call POST /api/admin/puzzles "$A" "$(P 'Admin P' 2000 Landscape)"
+call POST /api/admin/puzzles "$A" "{\"name\":\"Admin P\",\"pieces\":2000,\"theme\":\"Landscape\",\"imageUrl\":\"$IMG\"}"
 check "admin create 201" 201 "$STATUS"
 check "admin puzzle available" "available" "$(field data.status)"
+check "admin puzzle condition n/a" "n/a" "$(field data.condition)"
 ADMINP=$(field data.id)
 call PATCH "/api/admin/puzzles/$ADMINP" "$A" '{"status":"traded"}'
 check "admin cannot set traded directly 400" 400 "$STATUS"

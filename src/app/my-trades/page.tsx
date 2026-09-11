@@ -53,6 +53,25 @@ function HistoryInner() {
 
     return (
         <div className="flex flex-col gap-10">
+            <Card className="flex flex-wrap items-center gap-8">
+                <div>
+                    <p className="text-sm text-muted">Puzzles added</p>
+                    <p className="font-display text-3xl font-bold text-primary">
+                        {history.stats.puzzlesAdded}
+                    </p>
+                </div>
+                <div>
+                    <p className="text-sm text-muted">Puzzles taken</p>
+                    <p className="font-display text-3xl font-bold text-primary">
+                        {history.stats.puzzlesTaken}
+                    </p>
+                </div>
+                <p className="text-sm text-muted">
+                    {history.stats.returning
+                        ? 'You trade one puzzle for one.'
+                        : 'Your first trade is two puzzles for one. After one approved puzzle, it is one for one.'}
+                </p>
+            </Card>
             <section aria-labelledby="trades">
                 <h2 id="trades" className="mb-4 text-2xl">
                     Trades

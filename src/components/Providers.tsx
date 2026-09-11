@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { AuthDialog } from './AuthDialog';
@@ -10,7 +10,10 @@ export function Providers({ children }: { children: ReactNode }) {
         <ToastProvider>
             <AuthProvider>
                 {children}
-                <AuthDialog />
+                {/* AuthDialog reads ?signin=1&next=... so it needs a Suspense boundary. */}
+                <Suspense fallback={null}>
+                    <AuthDialog />
+                </Suspense>
             </AuthProvider>
         </ToastProvider>
     );

@@ -7,11 +7,14 @@ export const THEMES = ['Animals', 'Landscape', 'Art', 'Food', 'Cityscape', 'Movi
 /** Stored as the lower bound; 2000 is displayed as "2000+". */
 export const PIECES = [100, 300, 500, 1000, 2000] as const;
 
+/** Conditions a donor or trader can choose. Admin inventory stores CONDITION_NA instead. */
 export const CONDITIONS = ['new', 'good', 'fair'] as const;
-export const CONDITION_LABELS: Record<(typeof CONDITIONS)[number], string> = {
+export const CONDITION_NA = 'n/a';
+export const CONDITION_LABELS: Record<(typeof CONDITIONS)[number] | typeof CONDITION_NA, string> = {
     new: 'New',
     good: 'Good',
     fair: 'Fair',
+    'n/a': 'Not specified',
 };
 
 export const PUZZLE_STATUSES = [
@@ -50,6 +53,17 @@ export const MAX_PUZZLES_PER_SUBMISSION = 20;
 export const MAX_NAME_LENGTH = 120;
 export const MIN_PASSWORD_LENGTH = 8;
 export const UPLOAD_URL_PREFIX = '/uploads/';
+
+/** Single email rule shared by server validation and client forms. */
+export const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+export function normalizeEmail(value: string): string {
+    return value.trim().toLowerCase();
+}
+
+export function isEmail(value: string): boolean {
+    return EMAIL_RE.test(value.trim());
+}
 
 export function pieceLabel(pieces: number): string {
     return pieces >= 2000 ? '2000+' : String(pieces);

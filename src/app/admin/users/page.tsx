@@ -25,8 +25,9 @@ export default function AdminUsersPage() {
             },
             { key: 'joined', header: 'Joined', render: (u) => new Date(u.createdAt).toLocaleDateString() },
             { key: 'credits', header: 'Credits', render: (u) => u.creditBalance },
+            { key: 'added', header: 'Puzzles added', render: (u) => u.puzzlesAdded },
+            { key: 'taken', header: 'Puzzles taken', render: (u) => u.puzzlesTaken },
             { key: 'trades', header: 'Completed trades', render: (u) => u.completedTrades },
-            { key: 'batches', header: 'Accepted donations', render: (u) => u.acceptedBatches },
             {
                 key: 'tier',
                 header: 'Trader',

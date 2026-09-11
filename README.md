@@ -53,8 +53,9 @@ BASE=http://localhost:3000 ADMIN_EMAIL=founder@example.com scripts/smoke.sh
 needed to spend credits and to see My Trades. Everything is keyed by lowercased email, so a guest's history and
 credits appear once they create an account with the same email.
 
-**Trader tier.** An email is _returning_ if it has at least one completed trade or one accepted donation;
-otherwise _new_. The trade form looks this up before sign-in.
+**Trader tier.** An email is _returning_ once at least one of its puzzles has been approved onto the site
+(puzzles added ≥ 1); otherwise _new_. Puzzles added and puzzles taken are tracked per email. Completing a
+trade approves the puzzles that were handed over. The trade form looks this up before sign-in.
 
 **Trades.** New traders give 2 puzzles and pick 1; returning traders give 1 and pick 1 (enforced by the
 server). The picked puzzle is reserved immediately. The admin marks the trade completed after hand-off

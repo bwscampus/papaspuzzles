@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CONDITION_LABELS, pieceLabel } from '@/lib/constants';
+import { CONDITION_LABELS, CONDITION_NA, pieceLabel } from '@/lib/constants';
 import type { PublicPuzzle } from '@/lib/types';
 import { Badge } from './ui/Badge';
 
@@ -41,7 +41,9 @@ export function PuzzleCard({
             <div className="flex flex-1 flex-col gap-3 p-4">
                 <div className="flex items-start justify-between gap-2">
                     <h3 className="text-lg leading-tight">{puzzle.name}</h3>
-                    <Badge tone="neutral">{CONDITION_LABELS[puzzle.condition]}</Badge>
+                    {puzzle.condition !== CONDITION_NA && (
+                        <Badge tone="neutral">{CONDITION_LABELS[puzzle.condition]}</Badge>
+                    )}
                 </div>
                 <p className="text-sm text-muted">{puzzle.theme}</p>
                 {action && <div className="mt-auto pt-1">{action}</div>}

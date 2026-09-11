@@ -5,6 +5,9 @@ export default function NotFound() {
         <main className="mx-auto flex max-w-xl flex-col items-center px-4 py-24 text-center">
             <h1 className="text-4xl">Missing piece</h1>
             <p className="mt-3 text-muted">We could not find that page.</p>
+            <p className="mt-2 text-sm text-muted">
+                Trying to reach the admin area? Sign in with an admin account first.
+            </p>
             <Button href="/" className="mt-8">
                 Back to home
             </Button>
