@@ -87,6 +87,11 @@ export interface AcceptResult {
 
 export async function acceptDonationBatch(id: string): Promise<AcceptResult> {
     return withTransaction(async (client) => {
+        // Serialize accepts per donor so two batches cannot both get the first-batch discount.
+        await client.query(
+            'select pg_advisory_xact_lock(hashtext(lower((select donor_email from donation_batches where id = $1))))',
+            [id]
+        );
         const batch = await queryOne<{ id: string; donor_email: string; status: string }>(
             'select id, donor_email, status from donation_batches where id = $1 for update',
             [id],

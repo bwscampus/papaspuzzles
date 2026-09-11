@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, type AuthMode } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { errorMessage } from '@/lib/client/api';
@@ -15,15 +16,33 @@ const TITLES: Record<AuthMode, string> = {
     forgot: 'Reset your password',
 };
 
+/** Only same-site paths are honoured as a post-sign-in destination. */
+function safeNext(value: string | null): string | null {
+    return value && value.startsWith('/') && !value.startsWith('//') ? value : null;
+}
+
 /** The single sign-in / sign-up / forgot-password dialog, mounted once in Providers. */
 export function AuthDialog() {
     const { dialog, closeAuthDialog, openAuthDialog, signIn, signUp, requestPasswordReset } = useAuth();
     const toast = useToast();
+    const router = useRouter();
+    const params = useSearchParams();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
+    const [next, setNext] = useState<string | null>(null);
+
+    // Pages that need a session (e.g. /admin while signed out) redirect to /?signin=1&next=/path.
+    useEffect(() => {
+        if (params.get('signin') === '1') {
+            setNext(safeNext(params.get('next')));
+            openAuthDialog('signin');
+            router.replace('/');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [params]);
 
     useEffect(() => {
         if (dialog) {
@@ -52,6 +71,10 @@ export function AuthDialog() {
             }
             setPassword('');
             closeAuthDialog();
+            if (mode !== 'forgot' && next) {
+                router.push(next);
+                setNext(null);
+            }
         } catch (err) {
             setError(errorMessage(err));
         } finally {

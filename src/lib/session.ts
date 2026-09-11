@@ -70,8 +70,11 @@ export async function clearSession(): Promise<void> {
 export async function getSession(): Promise<Session | null> {
     const token = (await cookies()).get(SESSION_COOKIE)?.value;
     if (!token) return null;
+    // Resolved outside the try so a missing SESSION_SECRET fails loudly instead of
+    // silently treating every visitor as signed out.
+    const key = secretKey();
     try {
-        const { payload } = await jwtVerify(token, secretKey());
+        const { payload } = await jwtVerify(token, key);
         if (typeof payload.sub !== 'string') return null;
         const version = typeof payload.v === 'number' ? payload.v : 1;
         return { userId: payload.sub, version };

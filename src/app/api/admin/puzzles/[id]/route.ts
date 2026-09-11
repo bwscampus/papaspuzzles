@@ -1,9 +1,15 @@
 import { handle, ok, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
-import { CONDITIONS, MAX_NAME_LENGTH, PIECES, PUZZLE_STATUSES, THEMES } from '@/lib/constants';
+import { MAX_NAME_LENGTH, PIECES, PUZZLE_STATUSES, THEMES } from '@/lib/constants';
 import { adminDelete, adminUpdate } from '@/lib/services/puzzles';
-import type { Condition, Pieces, PuzzleInput, PuzzleStatus, Theme } from '@/lib/types';
-import { validateEnum, validateImageUrl, validateString, validateUuid } from '@/lib/validate';
+import type { Pieces, PuzzleInput, PuzzleStatus, Theme } from '@/lib/types';
+import {
+    validateCondition,
+    validateEnum,
+    validateImageUrl,
+    validateString,
+    validateUuid,
+} from '@/lib/validate';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +27,7 @@ export const PATCH = handle<Ctx>('admin/puzzles/[id]', async (request, { params 
         patch.pieces = validateEnum<Pieces>(body.pieces, PIECES, 'pieces', 'Piece count');
     if (body.theme !== undefined) patch.theme = validateEnum<Theme>(body.theme, THEMES, 'theme', 'Theme');
     if (body.condition !== undefined) {
-        patch.condition = validateEnum<Condition>(body.condition, CONDITIONS, 'condition', 'Condition');
+        patch.condition = validateCondition(body.condition, 'condition', { conditionOptional: true });
     }
     if (body.imageUrl !== undefined) patch.imageUrl = validateImageUrl(body.imageUrl, 'imageUrl');
     if (body.status !== undefined) {

@@ -75,7 +75,7 @@ The admin's review is the check that a photo is a real puzzle. There is no autom
 **Admin** (founder's account only) —
 
 - **Puzzles**: every puzzle with a status column; approve, reject, edit, delete.
-- **Add Inventory**: add puzzles with the same fields as Donate but without personal information.
+- **Add Inventory**: add puzzles with the same fields as Donate but without personal information and without a condition (stored as n/a).
 - **Users**: everyone who has made an account, with credits and trader status.
 - **Trades**: every trade with drop-off details; mark completed or cancelled.
 - **Donations & Credits**: pending donations to accept or reject; credits awarded; credit pick-ups to fulfil.

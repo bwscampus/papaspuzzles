@@ -1,11 +1,11 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/PageShell';
 import { PuzzleFormList } from '@/components/PuzzleFormList';
 import { PuzzlePicker } from '@/components/PuzzlePicker';
-import { TraderStatusNotice } from '@/components/TraderStatusNotice';
+import { TraderStatusNotice, type TraderLookup } from '@/components/TraderStatusNotice';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -17,11 +17,12 @@ import {
     applyServerFieldError,
     draftToInput,
     emptyDraft,
+    isDraftEmpty,
     validateDraft,
     type DraftErrors,
     type PuzzleDraft,
 } from '@/lib/client/puzzleDraft';
-import { DROPOFF_SLOTS, dropoffSlotLabel } from '@/lib/constants';
+import { DROPOFF_SLOTS, dropoffSlotLabel, isEmail, normalizeEmail } from '@/lib/constants';
 import type { PublicPuzzle, TraderStatus } from '@/lib/types';
 
 const STEPS = ['Your info', 'Your puzzles', 'Pick & drop-off'] as const;
@@ -32,14 +33,15 @@ function todayIso(): string {
 
 function TradeWizard() {
     const wanted = useSearchParams().get('wanted');
-    const { user, openAuthDialog } = useAuth();
+    const { user, loading: authLoading, openAuthDialog } = useAuth();
 
     const [step, setStep] = useState(1);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    const [status, setStatus] = useState<TraderStatus | null>(null);
+    const [lookup, setLookup] = useState<TraderLookup>({ state: 'idle' });
     const [drafts, setDrafts] = useState<PuzzleDraft[]>([]);
     const [draftErrors, setDraftErrors] = useState<Record<string, DraftErrors>>({});
+    const [countNotice, setCountNotice] = useState('');
     const [selected, setSelected] = useState<string[]>(wanted ? [wanted] : []);
     const [available, setAvailable] = useState<PublicPuzzle[]>([]);
     const [dropoffDate, setDropoffDate] = useState('');
@@ -56,25 +58,56 @@ function TradeWizard() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
-    const requiredGiven = status?.requiredGiven ?? 2;
+    // The status only counts when it belongs to the email currently in the field.
+    const status: TraderStatus | null =
+        lookup.state === 'ok' && lookup.email === normalizeEmail(email) ? lookup.status : null;
+    const requiredGiven = status?.requiredGiven ?? null;
 
-    // Keep exactly the number of puzzle forms the trader's tier requires.
+    // Keep exactly the number of puzzle forms the tier requires, without discarding typed data.
     useEffect(() => {
+        if (requiredGiven === null) return;
         setDrafts((current) => {
             if (current.length === requiredGiven) return current;
-            if (current.length > requiredGiven) return current.slice(0, requiredGiven);
-            return [...current, ...Array.from({ length: requiredGiven - current.length }, emptyDraft)];
+            if (current.length < requiredGiven) {
+                return [
+                    ...current,
+                    ...Array.from({ length: requiredGiven - current.length }, () => emptyDraft()),
+                ];
+            }
+            const keep = current.filter((d) => !isDraftEmpty(d));
+            if (keep.length <= requiredGiven) {
+                return [...keep, ...Array.from({ length: requiredGiven - keep.length }, () => emptyDraft())];
+            }
+            setCountNotice(
+                `You're a returning trader, so only ${requiredGiven} puzzle is needed. Remove the one you'd rather keep.`
+            );
+            return current;
         });
     }, [requiredGiven]);
 
     const pickedPuzzle = useMemo(() => available.find((p) => p.id === selected[0]), [available, selected]);
 
+    const refreshStatus = useCallback(async () => {
+        const normalized = normalizeEmail(email);
+        try {
+            const fresh = await api.get<TraderStatus>(
+                `/api/trader-status?email=${encodeURIComponent(normalized)}`
+            );
+            setLookup({ state: 'ok', email: normalized, status: fresh });
+        } catch (err) {
+            setLookup({ state: 'error', email: normalized, message: errorMessage(err) });
+        }
+    }, [email]);
+
     const goToPuzzles = (e: FormEvent) => {
         e.preventDefault();
         setError('');
         if (!name.trim()) return setError('Please enter your name.');
-        if (!email.trim()) return setError('Please enter your email.');
-        if (!status) return setError('Checking your trader status. Please try again in a moment.');
+        if (!isEmail(email)) return setError('Please enter a valid email address.');
+        if (lookup.state === 'loading') return setError('Still checking your trader status. One moment.');
+        if (lookup.state === 'error')
+            return setError('We could not check your trader status. Use "Try again" above.');
+        if (!status) return setError('Please wait for the trader status check to finish.');
         setStep(2);
         window.scrollTo({ top: 0 });
     };
@@ -82,6 +115,11 @@ function TradeWizard() {
     const goToPick = (e: FormEvent) => {
         e.preventDefault();
         setError('');
+        if (requiredGiven !== null && drafts.length !== requiredGiven) {
+            return setError(
+                `Please provide exactly ${requiredGiven} puzzle${requiredGiven === 1 ? '' : 's'}.`
+            );
+        }
         const next: Record<string, DraftErrors> = {};
         for (const d of drafts) {
             const errs = validateDraft(d);
@@ -103,8 +141,8 @@ function TradeWizard() {
         setBusy(true);
         try {
             const data = await api.post<{ tradeId: string; tier: string }>('/api/trades', {
-                name,
-                email,
+                name: name.trim(),
+                email: normalizeEmail(email),
                 wantedPuzzleId: selected[0],
                 givenPuzzles: drafts.map(draftToInput),
                 dropoffDate,
@@ -115,8 +153,12 @@ function TradeWizard() {
         } catch (err) {
             if (err instanceof ApiClientError) {
                 const mapped = applyServerFieldError(err.field, 'givenPuzzles', err.message, drafts);
-                if (mapped || err.field === 'givenPuzzles') {
-                    if (mapped) setDraftErrors(mapped);
+                if (mapped) {
+                    setDraftErrors(mapped);
+                    setStep(2);
+                } else if (err.field === 'givenPuzzles') {
+                    // The server's tier is authoritative; reload it so the form count corrects itself.
+                    await refreshStatus();
                     setStep(2);
                 }
             }
@@ -151,7 +193,8 @@ function TradeWizard() {
                     </p>
                     {!user && (
                         <Alert tone="info" className="mt-6" title="Track your trades">
-                            Create an account with <strong>{email}</strong> to see this trade under My Trades.
+                            Create an account with <strong>{normalizeEmail(email)}</strong> to see this trade
+                            under My Trades.
                             <div className="mt-3">
                                 <Button size="sm" onClick={() => openAuthDialog('signup')}>
                                     Create an account
@@ -193,7 +236,7 @@ function TradeWizard() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            disabled={!!user}
+                            disabled={!!user || authLoading}
                             hint={
                                 user
                                     ? 'Using your account email.'
@@ -201,11 +244,11 @@ function TradeWizard() {
                             }
                             autoComplete="email"
                         />
-                        <TraderStatusNotice email={email} onStatus={setStatus} />
+                        <TraderStatusNotice email={email} onChange={setLookup} />
                     </Card>
                     {error && <Alert tone="error">{error}</Alert>}
                     <div className="flex justify-end">
-                        <Button type="submit" size="lg">
+                        <Button type="submit" size="lg" disabled={authLoading || !status}>
                             Continue
                         </Button>
                     </div>
@@ -219,11 +262,30 @@ function TradeWizard() {
                             ? 'As a new trader, tell us about the two puzzles you are giving.'
                             : 'Tell us about the puzzle you are giving.'}
                     </Alert>
+                    {countNotice && (
+                        <Alert tone="warn">
+                            {countNotice}
+                            <div className="mt-2">
+                                <Button size="sm" variant="ghost" onClick={() => setCountNotice('')}>
+                                    Got it
+                                </Button>
+                            </div>
+                        </Alert>
+                    )}
                     <PuzzleFormList
                         items={drafts}
-                        onChange={setDrafts}
+                        onChange={(items) => {
+                            setDrafts(items);
+                            if (requiredGiven !== null && items.length === requiredGiven) setCountNotice('');
+                        }}
                         errors={draftErrors}
-                        fixedCount={requiredGiven}
+                        fixedCount={
+                            requiredGiven !== null && drafts.length === requiredGiven
+                                ? requiredGiven
+                                : undefined
+                        }
+                        min={1}
+                        max={requiredGiven ?? 2}
                     />
                     {error && <Alert tone="error">{error}</Alert>}
                     <div className="flex justify-between">
@@ -276,7 +338,7 @@ function TradeWizard() {
                         <Button variant="ghost" onClick={() => setStep(2)}>
                             Back
                         </Button>
-                        <Button type="submit" size="lg" loading={busy}>
+                        <Button type="submit" size="lg" loading={busy} disabled={authLoading}>
                             {pickedPuzzle ? `Trade for ${pickedPuzzle.name}` : 'Submit trade'}
                         </Button>
                     </div>

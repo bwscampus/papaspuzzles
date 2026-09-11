@@ -12,7 +12,8 @@ import type {
 
 export type Theme = (typeof THEMES)[number];
 export type Pieces = (typeof PIECES)[number];
-export type Condition = (typeof CONDITIONS)[number];
+/** 'n/a' is only ever written by admin inventory. */
+export type Condition = (typeof CONDITIONS)[number] | 'n/a';
 export type PuzzleStatus = (typeof PUZZLE_STATUSES)[number];
 export type PuzzleSource = (typeof PUZZLE_SOURCES)[number];
 export type TradeStatus = (typeof TRADE_STATUSES)[number];

@@ -111,3 +111,27 @@ describe('dates and slots', () => {
         expect(() => validateDropoffSlot('15:00')).toThrow(ApiError);
     });
 });
+
+describe('admin inventory condition', () => {
+    const base = { ...goodPuzzle };
+    it('is required for donors and traders', () => {
+        expect(() => validatePuzzleInput({ ...base, condition: undefined })).toThrow(ApiError);
+        expect(() => validatePuzzleInput({ ...base, condition: 'n/a' })).toThrow(ApiError);
+    });
+    it('is stored as n/a when optional and omitted', () => {
+        const { condition } = validatePuzzleInput({ ...base, condition: undefined }, 'puzzle', {
+            conditionOptional: true,
+        });
+        expect(condition).toBe('n/a');
+        expect(
+            validatePuzzleInput({ ...base, condition: '' }, 'puzzle', { conditionOptional: true }).condition
+        ).toBe('n/a');
+        expect(
+            validatePuzzleInput({ ...base, condition: 'good' }, 'puzzle', { conditionOptional: true })
+                .condition
+        ).toBe('good');
+        expect(() =>
+            validatePuzzleInput({ ...base, condition: 'mint' }, 'puzzle', { conditionOptional: true })
+        ).toThrow(ApiError);
+    });
+});

@@ -14,18 +14,21 @@ import {
     type DraftErrors,
     type PuzzleDraft,
 } from '@/lib/client/puzzleDraft';
+import { CONDITION_NA } from '@/lib/constants';
 import type { AdminPuzzle } from '@/lib/types';
+
+const newInventoryDraft = () => emptyDraft({ condition: CONDITION_NA });
 
 export default function AdminInventoryPage() {
     const toast = useToast();
-    const [draft, setDraft] = useState<PuzzleDraft>(() => emptyDraft());
+    const [draft, setDraft] = useState<PuzzleDraft>(newInventoryDraft);
     const [errors, setErrors] = useState<DraftErrors>({});
     const [busy, setBusy] = useState(false);
     const [added, setAdded] = useState<AdminPuzzle[]>([]);
 
     const submit = async (e: FormEvent) => {
         e.preventDefault();
-        const errs = validateDraft(draft);
+        const errs = validateDraft(draft, { conditionOptional: true });
         setErrors(errs);
         if (Object.keys(errs).length) return;
         setBusy(true);
@@ -33,7 +36,7 @@ export default function AdminInventoryPage() {
             const puzzle = await api.post<AdminPuzzle>('/api/admin/puzzles', draftToInput(draft));
             toast.success(`${puzzle.name} is now available on Explore.`);
             setAdded((list) => [puzzle, ...list]);
-            setDraft(emptyDraft());
+            setDraft(newInventoryDraft());
         } catch (err) {
             toast.error(errorMessage(err));
         } finally {
@@ -47,10 +50,10 @@ export default function AdminInventoryPage() {
                 <Card>
                     <h2 className="mb-1 text-xl">Add a puzzle to inventory</h2>
                     <p className="mb-6 text-sm text-muted">
-                        Same details as a donation, without any personal information. It goes live
-                        immediately.
+                        Name, pieces, theme, and a photo. No personal information and no condition. It goes
+                        live immediately.
                     </p>
-                    <PuzzleForm value={draft} onChange={setDraft} errors={errors} />
+                    <PuzzleForm value={draft} onChange={setDraft} errors={errors} showCondition={false} />
                     <div className="mt-6 flex justify-end">
                         <Button type="submit" loading={busy}>
                             Add to inventory

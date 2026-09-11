@@ -1,7 +1,9 @@
 import { validationError } from './api';
 import {
     CONDITIONS,
+    CONDITION_NA,
     DROPOFF_SLOT_VALUES,
+    EMAIL_RE,
     MAX_NAME_LENGTH,
     MAX_PUZZLES_PER_SUBMISSION,
     MIN_PASSWORD_LENGTH,
@@ -11,7 +13,6 @@ import {
 } from './constants';
 import type { Condition, Pieces, PuzzleInput, Theme } from './types';
 
-const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -92,14 +93,37 @@ export function validateImageUrl(value: unknown, field: string): string {
     return url;
 }
 
+export interface PuzzleInputOptions {
+    /** Admin inventory: condition may be omitted and is stored as 'n/a'. */
+    conditionOptional?: boolean;
+}
+
+export function validateCondition(
+    value: unknown,
+    field: string,
+    options: PuzzleInputOptions = {}
+): Condition {
+    if (
+        options.conditionOptional &&
+        (value === undefined || value === null || value === '' || value === CONDITION_NA)
+    ) {
+        return CONDITION_NA;
+    }
+    return validateEnum<Condition>(value, CONDITIONS, field, 'Condition');
+}
+
 /** Validates one puzzle. `prefix` names the array slot for field-level errors, e.g. "puzzles.0". */
-export function validatePuzzleInput(raw: unknown, prefix = 'puzzle'): PuzzleInput {
+export function validatePuzzleInput(
+    raw: unknown,
+    prefix = 'puzzle',
+    options: PuzzleInputOptions = {}
+): PuzzleInput {
     const p = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
     return {
         name: validateString(p.name, `${prefix}.name`, 'Puzzle name', MAX_NAME_LENGTH),
         pieces: validateEnum<Pieces>(p.pieces, PIECES, `${prefix}.pieces`, 'Piece count'),
         theme: validateEnum<Theme>(p.theme, THEMES, `${prefix}.theme`, 'Theme'),
-        condition: validateEnum<Condition>(p.condition, CONDITIONS, `${prefix}.condition`, 'Condition'),
+        condition: validateCondition(p.condition, `${prefix}.condition`, options),
         imageUrl: validateImageUrl(p.imageUrl, `${prefix}.imageUrl`),
     };
 }

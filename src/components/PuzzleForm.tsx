@@ -10,10 +10,13 @@ export function PuzzleForm({
     value,
     onChange,
     errors = {},
+    showCondition = true,
 }: {
     value: PuzzleDraft;
     onChange: (next: PuzzleDraft) => void;
     errors?: DraftErrors;
+    /** Admin inventory hides the condition field and stores 'n/a'. */
+    showCondition?: boolean;
 }) {
     const set = (patch: Partial<PuzzleDraft>) => onChange({ ...value, ...patch });
 
@@ -42,14 +45,17 @@ export function PuzzleForm({
                 error={errors.theme}
                 placeholder="Choose…"
                 options={THEMES.map((t) => ({ value: t, label: t }))}
+                className={showCondition ? undefined : 'sm:col-span-2'}
             />
-            <Select
-                label="Condition"
-                value={value.condition}
-                onChange={(e) => set({ condition: e.target.value })}
-                error={errors.condition}
-                options={CONDITIONS.map((c) => ({ value: c, label: CONDITION_LABELS[c] }))}
-            />
+            {showCondition && (
+                <Select
+                    label="Condition"
+                    value={value.condition}
+                    onChange={(e) => set({ condition: e.target.value })}
+                    error={errors.condition}
+                    options={CONDITIONS.map((c) => ({ value: c, label: CONDITION_LABELS[c] }))}
+                />
+            )}
             <div className="sm:col-span-2">
                 <PhotoUpload
                     value={value.imageUrl}

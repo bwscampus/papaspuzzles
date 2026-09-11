@@ -14,7 +14,13 @@ import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/client/api';
 import { draftToInput, validateDraft, type DraftErrors, type PuzzleDraft } from '@/lib/client/puzzleDraft';
-import { CONDITION_LABELS, PUZZLE_STATUSES, PUZZLE_STATUS_LABELS, pieceLabel } from '@/lib/constants';
+import {
+    CONDITION_LABELS,
+    CONDITION_NA,
+    PUZZLE_STATUSES,
+    PUZZLE_STATUS_LABELS,
+    pieceLabel,
+} from '@/lib/constants';
 import type { AdminPuzzle } from '@/lib/types';
 
 function toDraft(p: AdminPuzzle): PuzzleDraft {
@@ -47,7 +53,7 @@ export default function AdminPuzzlesPage() {
 
     const saveEdit = async () => {
         if (!editing || !draft) return;
-        const errs = validateDraft(draft);
+        const errs = validateDraft(draft, { conditionOptional: true });
         setDraftErrors(errs);
         if (Object.keys(errs).length) return;
         setSaving(true);
@@ -75,7 +81,8 @@ export default function AdminPuzzlesPage() {
                         <div>
                             <p className="font-semibold">{p.name}</p>
                             <p className="text-xs text-muted">
-                                {pieceLabel(p.pieces)} pcs · {p.theme} · {CONDITION_LABELS[p.condition]}
+                                {pieceLabel(p.pieces)} pcs · {p.theme}
+                                {p.condition !== CONDITION_NA && ` · ${CONDITION_LABELS[p.condition]}`}
                             </p>
                         </div>
                     </div>
@@ -216,7 +223,12 @@ export default function AdminPuzzlesPage() {
             <Modal open={editing !== null} onClose={() => setEditing(null)} title="Edit puzzle">
                 {draft && (
                     <div className="flex flex-col gap-6">
-                        <PuzzleForm value={draft} onChange={setDraft} errors={draftErrors} />
+                        <PuzzleForm
+                            value={draft}
+                            onChange={setDraft}
+                            errors={draftErrors}
+                            showCondition={false}
+                        />
                         <div className="flex justify-end gap-2">
                             <Button variant="ghost" onClick={() => setEditing(null)}>
                                 Cancel
