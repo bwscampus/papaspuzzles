@@ -112,26 +112,15 @@ describe('dates and slots', () => {
     });
 });
 
-describe('admin inventory condition', () => {
+describe('condition (not collected by any form)', () => {
     const base = { ...goodPuzzle };
-    it('is required for donors and traders', () => {
-        expect(() => validatePuzzleInput({ ...base, condition: undefined })).toThrow(ApiError);
-        expect(() => validatePuzzleInput({ ...base, condition: 'n/a' })).toThrow(ApiError);
+    it('defaults to n/a when omitted, empty, or n/a', () => {
+        expect(validatePuzzleInput({ ...base, condition: undefined }).condition).toBe('n/a');
+        expect(validatePuzzleInput({ ...base, condition: '' }).condition).toBe('n/a');
+        expect(validatePuzzleInput({ ...base, condition: 'n/a' }).condition).toBe('n/a');
     });
-    it('is stored as n/a when optional and omitted', () => {
-        const { condition } = validatePuzzleInput({ ...base, condition: undefined }, 'puzzle', {
-            conditionOptional: true,
-        });
-        expect(condition).toBe('n/a');
-        expect(
-            validatePuzzleInput({ ...base, condition: '' }, 'puzzle', { conditionOptional: true }).condition
-        ).toBe('n/a');
-        expect(
-            validatePuzzleInput({ ...base, condition: 'good' }, 'puzzle', { conditionOptional: true })
-                .condition
-        ).toBe('good');
-        expect(() =>
-            validatePuzzleInput({ ...base, condition: 'mint' }, 'puzzle', { conditionOptional: true })
-        ).toThrow(ApiError);
+    it('still accepts and rejects explicit values', () => {
+        expect(validatePuzzleInput({ ...base, condition: 'good' }).condition).toBe('good');
+        expect(() => validatePuzzleInput({ ...base, condition: 'mint' })).toThrow(ApiError);
     });
 });

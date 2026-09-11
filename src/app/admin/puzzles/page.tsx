@@ -53,7 +53,7 @@ export default function AdminPuzzlesPage() {
 
     const saveEdit = async () => {
         if (!editing || !draft) return;
-        const errs = validateDraft(draft, { conditionOptional: true });
+        const errs = validateDraft(draft);
         setDraftErrors(errs);
         if (Object.keys(errs).length) return;
         setSaving(true);
@@ -223,12 +223,7 @@ export default function AdminPuzzlesPage() {
             <Modal open={editing !== null} onClose={() => setEditing(null)} title="Edit puzzle">
                 {draft && (
                     <div className="flex flex-col gap-6">
-                        <PuzzleForm
-                            value={draft}
-                            onChange={setDraft}
-                            errors={draftErrors}
-                            showCondition={false}
-                        />
+                        <PuzzleForm value={draft} onChange={setDraft} errors={draftErrors} />
                         <div className="flex justify-end gap-2">
                             <Button variant="ghost" onClick={() => setEditing(null)}>
                                 Cancel

@@ -14,16 +14,12 @@ export interface PuzzleDraft {
     name: string;
     pieces: string;
     theme: string;
+    /** Not collected by any form; kept so existing puzzles can be edited without losing it. */
     condition: string;
     imageUrl: string;
 }
 
 export type DraftErrors = Partial<Record<keyof Omit<PuzzleDraft, 'key'>, string>>;
-
-export interface DraftOptions {
-    /** Admin inventory: no condition is collected; 'n/a' is stored. */
-    conditionOptional?: boolean;
-}
 
 let counter = 0;
 
@@ -33,7 +29,7 @@ export function emptyDraft(overrides: Partial<Omit<PuzzleDraft, 'key'>> = {}): P
         name: '',
         pieces: '',
         theme: '',
-        condition: 'good',
+        condition: CONDITION_NA,
         imageUrl: '',
         ...overrides,
     };
@@ -45,7 +41,7 @@ export function isDraftEmpty(draft: PuzzleDraft): boolean {
 }
 
 /** Client-side mirror of validatePuzzleInput so users get inline errors before a round trip. */
-export function validateDraft(draft: PuzzleDraft, options: DraftOptions = {}): DraftErrors {
+export function validateDraft(draft: PuzzleDraft): DraftErrors {
     const errors: DraftErrors = {};
     if (!draft.name.trim()) errors.name = 'Puzzle name is required.';
     else if (draft.name.length > MAX_NAME_LENGTH)
@@ -53,9 +49,10 @@ export function validateDraft(draft: PuzzleDraft, options: DraftOptions = {}): D
     if (!PIECES.includes(Number(draft.pieces) as Pieces)) errors.pieces = 'Choose a piece count.';
     if (!THEMES.includes(draft.theme as Theme)) errors.theme = 'Choose a theme.';
     const conditionOk =
-        (options.conditionOptional && (draft.condition === '' || draft.condition === CONDITION_NA)) ||
+        draft.condition === '' ||
+        draft.condition === CONDITION_NA ||
         CONDITIONS.includes(draft.condition as (typeof CONDITIONS)[number]);
-    if (!conditionOk) errors.condition = 'Choose a condition.';
+    if (!conditionOk) errors.condition = 'Invalid condition.';
     if (!draft.imageUrl.startsWith(UPLOAD_URL_PREFIX))
         errors.imageUrl = 'Please upload a photo of the puzzle.';
     return errors;

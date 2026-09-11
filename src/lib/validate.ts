@@ -93,37 +93,22 @@ export function validateImageUrl(value: unknown, field: string): string {
     return url;
 }
 
-export interface PuzzleInputOptions {
-    /** Admin inventory: condition may be omitted and is stored as 'n/a'. */
-    conditionOptional?: boolean;
-}
-
-export function validateCondition(
-    value: unknown,
-    field: string,
-    options: PuzzleInputOptions = {}
-): Condition {
-    if (
-        options.conditionOptional &&
-        (value === undefined || value === null || value === '' || value === CONDITION_NA)
-    ) {
+/** Condition is not collected by any form. Missing values are stored as 'n/a'; supplied ones must be valid. */
+export function validateCondition(value: unknown, field: string): Condition {
+    if (value === undefined || value === null || value === '' || value === CONDITION_NA) {
         return CONDITION_NA;
     }
     return validateEnum<Condition>(value, CONDITIONS, field, 'Condition');
 }
 
 /** Validates one puzzle. `prefix` names the array slot for field-level errors, e.g. "puzzles.0". */
-export function validatePuzzleInput(
-    raw: unknown,
-    prefix = 'puzzle',
-    options: PuzzleInputOptions = {}
-): PuzzleInput {
+export function validatePuzzleInput(raw: unknown, prefix = 'puzzle'): PuzzleInput {
     const p = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
     return {
         name: validateString(p.name, `${prefix}.name`, 'Puzzle name', MAX_NAME_LENGTH),
         pieces: validateEnum<Pieces>(p.pieces, PIECES, `${prefix}.pieces`, 'Piece count'),
         theme: validateEnum<Theme>(p.theme, THEMES, `${prefix}.theme`, 'Theme'),
-        condition: validateCondition(p.condition, `${prefix}.condition`, options),
+        condition: validateCondition(p.condition, `${prefix}.condition`),
         imageUrl: validateImageUrl(p.imageUrl, `${prefix}.imageUrl`),
     };
 }

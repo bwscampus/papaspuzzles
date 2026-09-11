@@ -69,7 +69,7 @@ STATUS=$(curl -s -o "$TMP/body" -w '%{http_code}' -X POST "$BASE/api/upload" -F 
 check "html disguised as png 400" 400 "$STATUS"
 check "traversal 404" 404 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/uploads/..%2F..%2Fpackage.json")"
 
-P() { echo "{\"name\":\"$1\",\"pieces\":$2,\"theme\":\"$3\",\"condition\":\"good\",\"imageUrl\":\"$IMG\"}"; }
+P() { echo "{\"name\":\"$1\",\"pieces\":$2,\"theme\":\"$3\",\"imageUrl\":\"$IMG\"}"; }
 
 echo "== donations and credits"
 call POST /api/donations "" "{\"name\":\"Guest Person\",\"email\":\"$GUEST\",\"puzzles\":[$(P "Smoke A $RUN" 500 Animals),$(P "Smoke B $RUN" 1000 Art)]}"

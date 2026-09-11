@@ -14,7 +14,7 @@ Papa's Puzzles works as a puzzle trading system which trades puzzlers' old puzzl
 
 | Term                        | Meaning                                                                                                                                                                                                                                                                                                               |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Puzzle**                  | Has a name, piece count, theme, condition, and a photo. Piece count is one of 100, 300, 500, 1000, 2000+. Theme is one of Animals, Landscape, Art, Food, Cityscape, Movies, Other. Condition is new, good, or fair. There is **no** easy / medium / hard category.                                                    |
+| **Puzzle**                  | Has a name, piece count, theme, and a photo. Piece count is one of 100, 300, 500, 1000, 2000+. Theme is one of Animals, Landscape, Art, Food, Cityscape, Movies, Other. There is **no** condition and **no** easy / medium / hard category.                                                    |
 | **Puzzle status**           | `pending review` (submitted, not yet public) → `available` (shown on Explore) → `reserved` (picked in a trade or with credits, hand-off not done yet) → `traded` (handed off in a trade) or `claimed` (handed off for credits). A puzzle can also be `rejected` by the admin. Explore shows only `available` puzzles. |
 | **Account**                 | Optional. Email + password. You need an account to use credits and to see My Trades. Everything is tied to your email, so anything you did as a guest shows up once you create an account with the same email.                                                                                                        |
 | **New vs returning trader** | **Returning** = this email has at least one completed trade or one accepted donation. **New** = neither. The system decides this from the email, so it works before signing in.                                                                                                                                       |
@@ -57,7 +57,7 @@ The admin's review is the check that a photo is a real puzzle. There is no autom
 **Start a Trade** — a form with 3 stages:
 
 1. Info (name, email). The site tells you whether you are a new or returning trader.
-2. Puzzle info (name, pieces, theme, condition, photo) — two forms for new traders, one for returning.
+2. Puzzle info (name, pieces, theme, photo) — two forms for new traders, one for returning.
 3. Choose the puzzle you want, then pick a drop-off date and time slot.
 
 **Donate Now** — same puzzle form as Start a Trade, one or more puzzles, with "Add Another Puzzle". Ends with the credits message above.
@@ -75,7 +75,7 @@ The admin's review is the check that a photo is a real puzzle. There is no autom
 **Admin** (founder's account only) —
 
 - **Puzzles**: every puzzle with a status column; approve, reject, edit, delete.
-- **Add Inventory**: add puzzles with the same fields as Donate but without personal information and without a condition (stored as n/a).
+- **Add Inventory**: add puzzles with the same fields as Donate but without personal information.
 - **Users**: everyone who has made an account, with credits and trader status.
 - **Trades**: every trade with drop-off details; mark completed or cancelled.
 - **Donations & Credits**: pending donations to accept or reject; credits awarded; credit pick-ups to fulfil.

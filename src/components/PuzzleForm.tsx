@@ -1,22 +1,22 @@
 'use client';
 
-import { CONDITIONS, CONDITION_LABELS, PIECES, THEMES, pieceLabel } from '@/lib/constants';
+import { PIECES, THEMES, pieceLabel } from '@/lib/constants';
 import type { DraftErrors, PuzzleDraft } from '@/lib/client/puzzleDraft';
 import { PhotoUpload } from './PhotoUpload';
 import { Input, Select } from './ui/Field';
 
-/** The one puzzle-entry form, used by Donate, Start a Trade, and admin Add Inventory. */
+/**
+ * The one puzzle-entry form, used by Donate, Start a Trade, and admin Add Inventory.
+ * Condition is not collected anywhere; puzzles are stored with condition 'n/a'.
+ */
 export function PuzzleForm({
     value,
     onChange,
     errors = {},
-    showCondition = true,
 }: {
     value: PuzzleDraft;
     onChange: (next: PuzzleDraft) => void;
     errors?: DraftErrors;
-    /** Admin inventory hides the condition field and stores 'n/a'. */
-    showCondition?: boolean;
 }) {
     const set = (patch: Partial<PuzzleDraft>) => onChange({ ...value, ...patch });
 
@@ -45,17 +45,7 @@ export function PuzzleForm({
                 error={errors.theme}
                 placeholder="Choose…"
                 options={THEMES.map((t) => ({ value: t, label: t }))}
-                className={showCondition ? undefined : 'sm:col-span-2'}
             />
-            {showCondition && (
-                <Select
-                    label="Condition"
-                    value={value.condition}
-                    onChange={(e) => set({ condition: e.target.value })}
-                    error={errors.condition}
-                    options={CONDITIONS.map((c) => ({ value: c, label: CONDITION_LABELS[c] }))}
-                />
-            )}
             <div className="sm:col-span-2">
                 <PhotoUpload
                     value={value.imageUrl}

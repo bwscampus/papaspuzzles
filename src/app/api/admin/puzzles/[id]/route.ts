@@ -27,7 +27,7 @@ export const PATCH = handle<Ctx>('admin/puzzles/[id]', async (request, { params 
         patch.pieces = validateEnum<Pieces>(body.pieces, PIECES, 'pieces', 'Piece count');
     if (body.theme !== undefined) patch.theme = validateEnum<Theme>(body.theme, THEMES, 'theme', 'Theme');
     if (body.condition !== undefined) {
-        patch.condition = validateCondition(body.condition, 'condition', { conditionOptional: true });
+        patch.condition = validateCondition(body.condition, 'condition');
     }
     if (body.imageUrl !== undefined) patch.imageUrl = validateImageUrl(body.imageUrl, 'imageUrl');
     if (body.status !== undefined) {

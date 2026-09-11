@@ -16,7 +16,6 @@ export const GET = handle('admin/puzzles', async (request) => {
 
 export const POST = handle('admin/puzzles', async (request) => {
     await requireAdmin();
-    // Admin inventory does not record a condition; it is stored as 'n/a'.
-    const input = validatePuzzleInput(await readJson(request), 'puzzle', { conditionOptional: true });
+    const input = validatePuzzleInput(await readJson(request), 'puzzle');
     return ok(await adminCreate(input), 201);
 });
