@@ -18,8 +18,17 @@ export const POST = handle('auth/signup', async (request) => {
             ? validateString(body.name, 'name', 'Name', MAX_NAME_LENGTH)
             : null;
 
-    const existing = await queryOne('select 1 from users where lower(email) = lower($1)', [email]);
-    if (existing) throw conflict('An account with this email already exists.');
+    const existing = await queryOne<{ password_hash: string | null }>(
+        'select password_hash from users where lower(email) = lower($1)',
+        [email]
+    );
+    if (existing) {
+        throw conflict(
+            existing.password_hash === null
+                ? 'This email already signs in with Google. Use "Continue with Google".'
+                : 'An account with this email already exists.'
+        );
+    }
 
     const row = await queryOne<UserRow>(
         `insert into users (email, display_name, password_hash) values ($1, $2, $3)

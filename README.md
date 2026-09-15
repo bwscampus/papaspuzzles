@@ -21,16 +21,17 @@ npm run migrate                         # applies db/migrations/*.sql
 npm run dev                             # http://localhost:3000
 ```
 
-| Variable         | Purpose                                                                                  |
-| ---------------- | ---------------------------------------------------------------------------------------- |
-| `DATABASE_URL`   | Postgres connection string                                                               |
-| `SESSION_SECRET` | Long random string for signing login cookies (`openssl rand -hex 32`)                    |
-| `ADMIN_EMAILS`   | Comma-separated emails whose accounts can open `/admin`                                  |
-| `UPLOAD_DIR`     | Directory for uploaded photos (default `./uploads`)                                      |
-| `APP_URL`        | Public URL used in password-reset emails (required in production)                        |
-| `RESEND_API_KEY` | Optional. Without it, reset links are printed to the server log instead of emailed       |
-| `EMAIL_FROM`     | Optional sender for reset emails                                                         |
-| `DATABASE_SSL`   | Optional `true`/`false` override. Defaults to off for `*.railway.internal` and localhost |
+| Variable                                   | Purpose                                                                                        |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                             | Postgres connection string                                                                     |
+| `SESSION_SECRET`                           | Long random string for signing login cookies (`openssl rand -hex 32`)                          |
+| `ADMIN_EMAILS`                             | Comma-separated emails whose accounts can open `/admin`                                        |
+| `UPLOAD_DIR`                               | Directory for uploaded photos (default `./uploads`)                                            |
+| `APP_URL`                                  | Public URL used in password-reset emails (required in production)                              |
+| `RESEND_API_KEY`                           | Optional. Without it, reset links are printed to the server log instead of emailed             |
+| `EMAIL_FROM`                               | Optional sender for reset emails                                                               |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional. Enables "Continue with Google"; redirect URI is `<APP_URL>/api/auth/google/callback` |
+| `DATABASE_SSL`                             | Optional `true`/`false` override. Defaults to off for `*.railway.internal` and localhost       |
 
 ### Commands
 
@@ -49,8 +50,9 @@ BASE=http://localhost:3000 ADMIN_EMAIL=founder@example.com scripts/smoke.sh
 
 ## How it works
 
-**Accounts are optional.** Guests trade or donate with a name and email. An account (email + password) is
-needed to spend credits and to see My Trades. Everything is keyed by lowercased email, so a guest's history and
+**Accounts are optional.** Guests trade or donate with a name and email. An account (email + password, or
+Sign in with Google) is needed to spend credits and to see My Trades. A Google sign-in links to the existing
+account with the same email, or creates a password-less one. Everything is keyed by lowercased email, so a guest's history and
 credits appear once they create an account with the same email.
 
 **Trader tier.** An email is _returning_ once at least one of its puzzles has been approved onto the site

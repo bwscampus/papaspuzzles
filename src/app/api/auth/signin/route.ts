@@ -16,14 +16,21 @@ export const POST = handle('auth/signin', async (request) => {
     const password = typeof body.password === 'string' ? body.password : '';
     if (!email || !password) throw unauthorized('Incorrect email or password.');
 
-    const row = await queryOne<UserRow & { password_hash: string }>(
+    const row = await queryOne<UserRow & { password_hash: string | null }>(
         'select id, email, display_name, session_version, password_hash from users where lower(email) = lower($1)',
         [email]
     );
 
     dummyHash ??= hashPassword('dummy-password-for-timing');
     const valid = await verifyPassword(password, row?.password_hash ?? (await dummyHash));
-    if (!row || !valid) throw unauthorized('Incorrect email or password.');
+    if (!row || !valid) {
+        if (row && row.password_hash === null) {
+            throw unauthorized(
+                'This account signs in with Google. Use "Continue with Google", or reset your password to add one.'
+            );
+        }
+        throw unauthorized('Incorrect email or password.');
+    }
 
     await createSession(row.id, row.session_version);
     return ok({ user: toUser(row) });

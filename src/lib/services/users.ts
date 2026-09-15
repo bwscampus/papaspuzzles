@@ -18,6 +18,8 @@ interface AdminUserRow {
     completed_trades: number;
     accepted_batches: number;
     returning: boolean;
+    has_password: boolean;
+    has_google: boolean;
 }
 
 export async function adminListUsers(): Promise<AdminUser[]> {
@@ -30,7 +32,9 @@ export async function adminListUsers(): Promise<AdminUser[]> {
                  where lower(t.trader_email) = lower(u.email) and t.status = 'completed') as completed_trades,
                (select count(*)::int from donation_batches b
                  where lower(b.donor_email) = lower(u.email) and b.status = 'accepted') as accepted_batches,
-               is_returning_trader(u.email) as returning
+               is_returning_trader(u.email) as returning,
+               (u.password_hash is not null) as has_password,
+               (u.google_sub is not null) as has_google
         from users u
         order by u.created_at desc`);
     return rows.map((r) => ({
@@ -45,6 +49,8 @@ export async function adminListUsers(): Promise<AdminUser[]> {
         acceptedBatches: r.accepted_batches,
         returning: r.returning,
         isAdmin: isAdminEmail(r.email),
+        hasPassword: r.has_password,
+        hasGoogle: r.has_google,
     }));
 }
 

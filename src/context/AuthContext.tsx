@@ -9,6 +9,8 @@ export type AuthMode = 'signin' | 'signup' | 'forgot';
 interface AuthContextValue {
     user: User | null;
     loading: boolean;
+    /** True when GOOGLE_CLIENT_ID/SECRET are configured on the server. */
+    googleEnabled: boolean;
     refresh: () => Promise<void>;
     signIn: (email: string, password: string) => Promise<void>;
     signUp: (email: string, password: string, name?: string) => Promise<void>;
@@ -24,12 +26,14 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [googleEnabled, setGoogleEnabled] = useState(false);
     const [dialog, setDialog] = useState<AuthMode | null>(null);
 
     const refresh = useCallback(async () => {
         try {
-            const data = await api.get<{ user: User | null }>('/api/auth/me');
+            const data = await api.get<{ user: User | null; googleEnabled: boolean }>('/api/auth/me');
             setUser(data.user);
+            setGoogleEnabled(data.googleEnabled);
         } catch {
             setUser(null);
         } finally {
@@ -45,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         () => ({
             user,
             loading,
+            googleEnabled,
             refresh,
             signIn: async (email, password) => {
                 const data = await api.post<{ user: User }>('/api/auth/signin', { email, password });
@@ -65,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             openAuthDialog: (mode = 'signin') => setDialog(mode),
             closeAuthDialog: () => setDialog(null),
         }),
-        [user, loading, refresh, dialog]
+        [user, loading, googleEnabled, refresh, dialog]
     );
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

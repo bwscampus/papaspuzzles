@@ -68,7 +68,7 @@ The admin's review is the check that a photo is a real puzzle. There is no autom
 
 **My Trades** — once signed in, your past trades (what you gave and received), your donations and the credits they earned, and your credit pick-ups.
 
-**Sign in** — create an account or sign in with email and password; reset password by email.
+**Sign in** — create an account or sign in with email and password, or continue with Google (linked to the account with the same email); reset password by email.
 
 **About Us** — Mission Statement, Our Values, Our Story, the quote, the founder photo, and the founder's info (Berkeley Katz, Papa's Puzzles Founder, info@papaspuzzles.org).
 
