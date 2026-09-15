@@ -24,12 +24,6 @@ export default function AdminUsersPage() {
                 ),
             },
             { key: 'joined', header: 'Joined', render: (u) => new Date(u.createdAt).toLocaleDateString() },
-            {
-                key: 'signin',
-                header: 'Sign-in',
-                render: (u) =>
-                    [u.hasGoogle && 'Google', u.hasPassword && 'Password'].filter(Boolean).join(' + ') || '—',
-            },
             { key: 'credits', header: 'Credits', render: (u) => u.creditBalance },
             { key: 'added', header: 'Puzzles added', render: (u) => u.puzzlesAdded },
             { key: 'taken', header: 'Puzzles taken', render: (u) => u.puzzlesTaken },

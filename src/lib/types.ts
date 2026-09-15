@@ -131,8 +131,6 @@ export interface AdminUser {
     acceptedBatches: number;
     returning: boolean;
     isAdmin: boolean;
-    hasPassword: boolean;
-    hasGoogle: boolean;
 }
 
 export interface History {
