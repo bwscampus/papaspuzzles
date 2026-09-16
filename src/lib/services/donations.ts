@@ -1,9 +1,9 @@
-import { conflict, notFound, validationError } from '@/lib/api';
-import { creditsForBatch } from '@/lib/credits';
+import { conflict, notFound } from '@/lib/api';
+import { awardPuzzles, getCreditBalance } from '@/lib/credits';
 import { iso, query, queryOne, withTransaction, type Queryable } from '@/lib/db';
-import { isReturningTrader } from '@/lib/trader';
 import type { AdminDonationBatch, BatchStatus, DonationBatchSummary, PuzzleInput } from '@/lib/types';
 import { PUZZLE_COLUMNS, toAdminPuzzle, type PuzzleRow } from './puzzles';
+import { syncBatchStatus } from './review';
 
 interface BatchRow {
     id: string;
@@ -47,7 +47,12 @@ export interface SubmitDonationResult {
     batchId: string;
     puzzleCount: number;
     returning: boolean;
+    /** Balance now, before approval. */
+    balance: number;
+    /** Credits this donation adds once approved (one per puzzle). */
     estimatedCredits: number;
+    /** Balance after approval. */
+    estimatedBalance: number;
 }
 
 export async function submitDonation(input: SubmitDonationInput): Promise<SubmitDonationResult> {
@@ -69,91 +74,69 @@ export async function submitDonation(input: SubmitDonationInput): Promise<Submit
             );
         }
 
-        const returning = await isReturningTrader(input.email, client);
+        const balance = await getCreditBalance(input.email, client);
         return {
             batchId,
             puzzleCount: input.puzzles.length,
-            returning,
-            estimatedCredits: creditsForBatch(input.puzzles.length, !returning),
+            returning: balance >= 0,
+            balance,
+            estimatedCredits: input.puzzles.length,
+            estimatedBalance: balance + input.puzzles.length,
         };
     });
 }
 
 export interface AcceptResult {
+    /** Credits the batch has earned so far (one per approved puzzle). */
     creditsAwarded: number;
-    wasFirstBatch: boolean;
     puzzlesPublished: number;
 }
 
+async function lockBatch(client: Queryable, id: string): Promise<string[]> {
+    const batch = await queryOne<{ id: string }>(
+        'select id from donation_batches where id = $1 for update',
+        [id],
+        client
+    );
+    if (!batch) throw notFound('Donation not found.');
+    const pending = await query<{ id: string }>(
+        `select id from puzzles where donation_batch_id = $1 and status = 'pending_review' order by created_at for update`,
+        [id],
+        client
+    );
+    if (pending.length === 0) throw conflict('Every puzzle in this donation has already been reviewed.');
+    return pending.map((r) => r.id);
+}
+
+/** Approves every puzzle in the batch still awaiting review. Puzzles can also be reviewed one by one. */
 export async function acceptDonationBatch(id: string): Promise<AcceptResult> {
     return withTransaction(async (client) => {
-        // Serialize accepts per donor so two batches cannot both get the first-batch discount.
+        const pending = await lockBatch(client, id);
         await client.query(
-            'select pg_advisory_xact_lock(hashtext(lower((select donor_email from donation_batches where id = $1))))',
-            [id]
+            `update puzzles set status = 'available', reviewed_at = now() where id = any($1::uuid[])`,
+            [pending]
         );
-        const batch = await queryOne<{ id: string; donor_email: string; status: string }>(
-            'select id, donor_email, status from donation_batches where id = $1 for update',
+        // One credit per approved puzzle, attached to the puzzle so it can never double-count.
+        await awardPuzzles(client, pending);
+        await syncBatchStatus(client, id);
+        const batch = await queryOne<{ credits_awarded: number | null }>(
+            'select credits_awarded from donation_batches where id = $1',
             [id],
             client
         );
-        if (!batch) throw notFound('Donation not found.');
-        if (batch.status !== 'pending_review') throw conflict('This donation has already been reviewed.');
-
-        const pending = await queryOne<{ count: number }>(
-            `select count(*)::int as count from puzzles where donation_batch_id = $1 and status = 'pending_review'`,
-            [id],
-            client
-        );
-        const count = pending?.count ?? 0;
-        if (count === 0) {
-            throw validationError('No puzzles in this donation are awaiting review. Reject it instead.');
-        }
-
-        const wasFirstBatch = !(await isReturningTrader(batch.donor_email, client));
-        const credits = creditsForBatch(count, wasFirstBatch);
-
-        await client.query(
-            `update puzzles set status = 'available', reviewed_at = now()
-             where donation_batch_id = $1 and status = 'pending_review'`,
-            [id]
-        );
-        await client.query(
-            `update donation_batches
-             set status = 'accepted', credits_awarded = $2, was_first_batch = $3, reviewed_at = now()
-             where id = $1`,
-            [id, credits, wasFirstBatch]
-        );
-        if (credits > 0) {
-            await client.query(
-                `insert into credit_entries (email, delta, reason, donation_batch_id)
-                 values ($1, $2, 'donation_accepted', $3)`,
-                [batch.donor_email, credits, id]
-            );
-        }
-
-        return { creditsAwarded: credits, wasFirstBatch, puzzlesPublished: count };
+        return { creditsAwarded: batch?.credits_awarded ?? 0, puzzlesPublished: pending.length };
     });
 }
 
+/** Rejects every puzzle in the batch still awaiting review. */
 export async function rejectDonationBatch(id: string): Promise<void> {
     await withTransaction(async (client) => {
-        const batch = await queryOne<{ status: string }>(
-            'select status from donation_batches where id = $1 for update',
-            [id],
-            client
-        );
-        if (!batch) throw notFound('Donation not found.');
-        if (batch.status !== 'pending_review') throw conflict('This donation has already been reviewed.');
+        const pending = await lockBatch(client, id);
         await client.query(
-            `update puzzles set status = 'rejected', reviewed_at = now()
-             where donation_batch_id = $1 and status = 'pending_review'`,
-            [id]
+            `update puzzles set status = 'rejected', reviewed_at = now() where id = any($1::uuid[])`,
+            [pending]
         );
-        await client.query(
-            `update donation_batches set status = 'rejected', reviewed_at = now() where id = $1`,
-            [id]
-        );
+        await syncBatchStatus(client, id);
     });
 }
 

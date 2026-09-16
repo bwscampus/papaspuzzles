@@ -13,7 +13,7 @@ import { api, errorMessage } from '@/lib/client/api';
 import type { PublicPuzzle } from '@/lib/types';
 
 export default function ExplorePage() {
-    const { user } = useAuth();
+    const { user, balance } = useAuth();
     const [filters, setFilters] = useState<Filters>({ theme: '', pieces: '' });
     const [puzzles, setPuzzles] = useState<PublicPuzzle[] | null>(null);
     const [error, setError] = useState('');
@@ -59,7 +59,7 @@ export default function ExplorePage() {
                         </Button>
                     </Alert>
                 ) : puzzles === null ? (
-                    <div className="flex justify-center py-20 text-primary">
+                    <div className="flex justify-center py-20 text-primary-text">
                         <Spinner className="h-8 w-8" />
                     </div>
                 ) : puzzles.length === 0 ? (
@@ -92,7 +92,7 @@ export default function ExplorePage() {
                         <p className="mb-4 text-sm text-muted" aria-live="polite">
                             {puzzles.length} puzzle{puzzles.length === 1 ? '' : 's'} available
                         </p>
-                        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                             {puzzles.map((p) => (
                                 <li key={p.id}>
                                     <PuzzleCard
@@ -106,7 +106,7 @@ export default function ExplorePage() {
                                                 >
                                                     Start a Trade
                                                 </Button>
-                                                {user && (
+                                                {user && (balance ?? 0) >= 1 && (
                                                     <Button
                                                         href={`/credits?pick=${p.id}`}
                                                         size="sm"

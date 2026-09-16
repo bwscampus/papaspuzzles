@@ -9,17 +9,13 @@ export default function HomePage() {
         <main>
             <section className="relative isolate overflow-hidden bg-ink">
                 <video
-                    className="absolute inset-0 h-full w-full object-cover opacity-60"
+                    className="absolute inset-0 h-full w-full object-cover"
                     src="/hero.mp4"
                     poster="/hero-poster.jpg"
                     autoPlay
                     muted
                     loop
                     playsInline
-                    aria-hidden="true"
-                />
-                <div
-                    className="absolute inset-0 bg-gradient-to-b from-ink/40 via-ink/30 to-ink/70"
                     aria-hidden="true"
                 />
                 <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-24 text-center sm:py-32">
@@ -69,7 +65,7 @@ export default function HomePage() {
 
             <section className="bg-cream">
                 <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
-                    <blockquote className="font-display text-2xl font-bold leading-snug text-primary sm:text-3xl">
+                    <blockquote className="font-display text-2xl font-bold leading-snug text-primary-text sm:text-3xl">
                         “{SITE.quote}”
                     </blockquote>
                     <p className="mt-4 text-sm text-muted">

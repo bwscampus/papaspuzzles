@@ -22,6 +22,17 @@ export function useAdminData<T>(path: string) {
 
     useEffect(() => {
         void reload();
+        // Admin tabs change each other's data (a review moves a puzzle's status), so refresh on return.
+        const onFocus = () => void reload();
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') void reload();
+        };
+        window.addEventListener('focus', onFocus);
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            window.removeEventListener('focus', onFocus);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
     }, [reload]);
 
     const run = useCallback(

@@ -39,7 +39,7 @@ export function Navbar() {
                 </Link>
             )}
             <span
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-primary font-display text-sm font-bold text-white"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-primary font-display text-sm font-bold text-ink"
                 title={user.email}
                 aria-label={`Signed in as ${user.email}`}
             >
@@ -48,7 +48,7 @@ export function Navbar() {
             <button
                 type="button"
                 onClick={handleSignOut}
-                className="flex items-center gap-1 text-sm font-medium text-muted hover:text-primary"
+                className="flex items-center gap-1 text-sm font-medium text-muted hover:text-primary-text"
             >
                 <LogOut className="h-4 w-4" aria-hidden="true" /> Sign out
             </button>
@@ -57,7 +57,7 @@ export function Navbar() {
         <button
             type="button"
             onClick={() => openAuthDialog('signin')}
-            className="flex items-center gap-1 text-sm font-medium text-muted hover:text-primary"
+            className="flex items-center gap-1 text-sm font-medium text-muted hover:text-primary-text"
         >
             <LogIn className="h-4 w-4" aria-hidden="true" /> Sign in
         </button>
@@ -67,11 +67,11 @@ export function Navbar() {
         <header className="sticky top-0 z-40 border-b border-rose/30 bg-white/95 backdrop-blur">
             <nav
                 aria-label="Main"
-                className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
+                className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
             >
                 <Link href="/" className="flex items-center gap-2">
-                    <Image src="/logo.png" alt="" width={40} height={40} className="rounded-full" priority />
-                    <span className="font-display text-xl font-bold text-primary">{SITE.name}</span>
+                    <Image src="/logo.png" alt="" width={56} height={56} className="rounded-full" priority />
+                    <span className="font-display text-2xl font-bold text-primary-text">{SITE.name}</span>
                 </Link>
 
                 <div className="hidden items-center gap-6 md:flex">
@@ -79,7 +79,7 @@ export function Navbar() {
                         <Link
                             key={l.href}
                             href={l.href}
-                            className="text-sm font-medium text-muted hover:text-primary"
+                            className="text-sm font-medium text-muted hover:text-primary-text"
                         >
                             {l.label}
                         </Link>
@@ -92,7 +92,7 @@ export function Navbar() {
 
                 <button
                     type="button"
-                    className="rounded-full p-2 text-primary md:hidden"
+                    className="rounded-full p-2 text-primary-text md:hidden"
                     aria-expanded={open}
                     aria-controls="mobile-menu"
                     aria-label={open ? 'Close menu' : 'Open menu'}

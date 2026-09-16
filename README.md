@@ -53,20 +53,23 @@ BASE=http://localhost:3000 ADMIN_EMAIL=founder@example.com scripts/smoke.sh
 needed to spend credits and to see My Trades. Everything is keyed by lowercased email, so a guest's history and
 credits appear once they create an account with the same email.
 
-**Trader tier.** An email is _returning_ once at least one of its puzzles has been approved onto the site
-(puzzles added ≥ 1); otherwise _new_. Puzzles added and puzzles taken are tracked per email. Completing a
-trade approves the puzzles that were handed over. The trade form looks this up before sign-in.
+**Credits and trader tier.** One ledger per email (`credit_entries`); `credit_balance(email)` is −1 plus the sum
+of entries, so everyone starts at −1. Each puzzle you submit is +1 once approved (donation accepted, trade
+completed, or approved individually), each puzzle taken in a trade is −1 at request time (refunded on cancel),
+and credit pick-ups charge at request and refund on cancel. Returning = balance ≥ 0; a trade requires
+`max(1, 1 − balance)` pledged puzzles, so a first trade is two for one.
 
 **Trades.** New traders give 2 puzzles and pick 1; returning traders give 1 and pick 1 (enforced by the
 server). The picked puzzle is reserved immediately. The admin marks the trade completed after hand-off
 (puzzle → traded) or cancels it (puzzle → available again).
 
-**Donations.** Puzzles enter review. When the admin accepts a donation, its puzzles go on Explore and credits
-are awarded: a new donor earns (count − 1), everyone else earns 1 per puzzle. Credits live in an email-keyed
-ledger (`credit_entries`).
+**Donations.** Puzzles enter review. The admin accepts or rejects each puzzle from the Donations page (the
+Puzzles tab only edits and deletes); each accepted puzzle adds one credit to the submitter's ledger, attached to the puzzle so it can never
+double-count.
 
 **Credits.** Signed-in members pick up to `balance` available puzzles. Puzzles are reserved and credits deducted
-atomically; the admin fulfils the pick-up (→ claimed) or cancels it (→ available, credits refunded).
+atomically; the admin accepts the pick-up (→ claimed) or rejects it (→ available, credits refunded).
+A donation batch's status follows its puzzles: pending while any is under review, then accepted or rejected.
 
 **Puzzle statuses:** `pending_review → available → reserved → traded | claimed`, plus `rejected`.
 

@@ -38,9 +38,11 @@ export interface User {
 }
 
 export interface TraderStatus {
-    /** True once at least one puzzle from this email has been approved onto the site. */
+    /** True once the credit balance is zero or above (everyone starts at -1). */
     returning: boolean;
-    requiredGiven: 1 | 2;
+    /** Puzzles that must be pledged in a trade: max(1, 1 - balance). */
+    requiredGiven: number;
+    balance: number;
     puzzlesAdded: number;
     puzzlesTaken: number;
 }
@@ -108,13 +110,25 @@ export interface RedemptionSummary {
     createdAt: string;
 }
 
+export type CreditReason =
+    | 'donation_accepted'
+    | 'puzzle_added'
+    | 'puzzle_removed'
+    | 'trade_taken'
+    | 'trade_cancelled'
+    | 'redemption'
+    | 'redemption_cancelled'
+    | 'admin_adjustment';
+
 export interface CreditEntry {
     id: string;
     email: string;
     delta: number;
-    reason: 'donation_accepted' | 'redemption' | 'redemption_cancelled' | 'admin_adjustment';
+    reason: CreditReason;
     donationBatchId: string | null;
     redemptionId: string | null;
+    puzzleId: string | null;
+    tradeId: string | null;
     note: string | null;
     createdAt: string;
 }

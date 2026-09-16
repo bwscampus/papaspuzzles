@@ -127,7 +127,7 @@ export function AuthDialog() {
                     <>
                         <button
                             type="button"
-                            className="hover:text-primary hover:underline"
+                            className="hover:text-primary-text hover:underline"
                             onClick={() => openAuthDialog('forgot')}
                         >
                             Forgot password?
@@ -136,7 +136,7 @@ export function AuthDialog() {
                             New here?{' '}
                             <button
                                 type="button"
-                                className="font-semibold text-primary hover:underline"
+                                className="font-semibold text-primary-text hover:underline"
                                 onClick={() => openAuthDialog('signup')}
                             >
                                 Create an account
@@ -149,7 +149,7 @@ export function AuthDialog() {
                         Already have an account?{' '}
                         <button
                             type="button"
-                            className="font-semibold text-primary hover:underline"
+                            className="font-semibold text-primary-text hover:underline"
                             onClick={() => openAuthDialog('signin')}
                         >
                             Sign in
@@ -159,7 +159,7 @@ export function AuthDialog() {
                 {mode === 'forgot' && (
                     <button
                         type="button"
-                        className="font-semibold text-primary hover:underline"
+                        className="font-semibold text-primary-text hover:underline"
                         onClick={() => openAuthDialog('signin')}
                     >
                         Back to sign in

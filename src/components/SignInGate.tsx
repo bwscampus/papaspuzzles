@@ -12,7 +12,7 @@ export function SignInGate({ title, text, children }: { title: string; text: str
 
     if (loading) {
         return (
-            <div className="flex justify-center py-20 text-primary">
+            <div className="flex justify-center py-20 text-primary-text">
                 <Spinner className="h-8 w-8" />
             </div>
         );

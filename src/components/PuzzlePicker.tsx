@@ -37,6 +37,9 @@ export function PuzzlePicker({
                 if (cancelled) return;
                 setPuzzles(data);
                 onLoaded?.(data);
+                // Selections that disappeared (taken by someone else, or filtered out) are dropped.
+                const kept = selected.filter((id) => data.some((p) => p.id === id));
+                if (kept.length !== selected.length) onChange(kept);
             })
             .catch((err) => {
                 if (!cancelled) setError(errorMessage(err));
@@ -44,7 +47,7 @@ export function PuzzlePicker({
         return () => {
             cancelled = true;
         };
-        // onLoaded is intentionally excluded: callers pass inline functions and only need the latest data.
+        // Only filters trigger a refetch; the latest callbacks/selection are read when data arrives.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters]);
 
@@ -65,7 +68,7 @@ export function PuzzlePicker({
             {error ? (
                 <Alert tone="error">{error}</Alert>
             ) : puzzles === null ? (
-                <div className="flex justify-center py-16 text-primary">
+                <div className="flex justify-center py-16 text-primary-text">
                     <Spinner className="h-8 w-8" />
                 </div>
             ) : puzzles.length === 0 ? (

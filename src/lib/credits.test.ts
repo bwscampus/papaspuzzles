@@ -1,22 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { creditsForBatch } from './credits';
+import { requiredGivenCount } from './trader';
 
-describe('creditsForBatch', () => {
-    it('gives new traders one less than the puzzle count', () => {
-        expect(creditsForBatch(1, true)).toBe(0);
-        expect(creditsForBatch(2, true)).toBe(1);
-        expect(creditsForBatch(10, true)).toBe(9);
+describe('credit ledger rules', () => {
+    it('someone at the starting balance (-1) must give two puzzles to take one', () => {
+        expect(requiredGivenCount(-1)).toBe(2);
     });
-
-    it('gives returning traders one credit per puzzle', () => {
-        expect(creditsForBatch(1, false)).toBe(1);
-        expect(creditsForBatch(10, false)).toBe(10);
+    it('anyone at zero or above trades one for one', () => {
+        expect(requiredGivenCount(0)).toBe(1);
+        expect(requiredGivenCount(5)).toBe(1);
     });
-
-    it('never goes negative or rewards empty batches', () => {
-        expect(creditsForBatch(0, true)).toBe(0);
-        expect(creditsForBatch(0, false)).toBe(0);
-        expect(creditsForBatch(-3, false)).toBe(0);
-        expect(creditsForBatch(2.5, false)).toBe(0);
+    it('a pending 2-for-1 trade (balance -2) needs three, never fewer than one', () => {
+        expect(requiredGivenCount(-2)).toBe(3);
+        expect(requiredGivenCount(100)).toBe(1);
     });
 });

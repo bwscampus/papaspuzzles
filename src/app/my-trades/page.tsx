@@ -34,7 +34,7 @@ function HistoryInner() {
     if (error) return <Alert tone="error">{error}</Alert>;
     if (!history) {
         return (
-            <div className="flex justify-center py-20 text-primary">
+            <div className="flex justify-center py-20 text-primary-text">
                 <Spinner className="h-8 w-8" />
             </div>
         );
@@ -55,21 +55,29 @@ function HistoryInner() {
         <div className="flex flex-col gap-10">
             <Card className="flex flex-wrap items-center gap-8">
                 <div>
+                    <p className="text-sm text-muted">Credits</p>
+                    <p className="font-display text-3xl font-bold text-primary-text">
+                        {history.stats.balance}
+                    </p>
+                </div>
+                <div>
                     <p className="text-sm text-muted">Puzzles added</p>
-                    <p className="font-display text-3xl font-bold text-primary">
+                    <p className="font-display text-3xl font-bold text-primary-text">
                         {history.stats.puzzlesAdded}
                     </p>
                 </div>
                 <div>
                     <p className="text-sm text-muted">Puzzles taken</p>
-                    <p className="font-display text-3xl font-bold text-primary">
+                    <p className="font-display text-3xl font-bold text-primary-text">
                         {history.stats.puzzlesTaken}
                     </p>
                 </div>
-                <p className="text-sm text-muted">
-                    {history.stats.returning
-                        ? 'You trade one puzzle for one.'
-                        : 'Your first trade is two puzzles for one. After one approved puzzle, it is one for one.'}
+                <p className="max-w-sm text-sm text-muted">
+                    {history.stats.balance >= 1
+                        ? 'You can claim a puzzle with each credit, or trade one for one.'
+                        : history.stats.balance === 0
+                          ? 'You trade one puzzle for one. Donate a puzzle to earn a credit.'
+                          : `Everyone starts at −1. Give ${history.stats.requiredGiven} puzzles in your first trade, or donate to earn credits.`}
                 </p>
             </Card>
             <section aria-labelledby="trades">
