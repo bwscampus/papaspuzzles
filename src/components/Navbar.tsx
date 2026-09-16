@@ -67,11 +67,11 @@ export function Navbar() {
         <header className="sticky top-0 z-40 border-b border-rose/30 bg-white/95 backdrop-blur">
             <nav
                 aria-label="Main"
-                className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
+                className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
             >
                 <Link href="/" className="flex items-center gap-2">
-                    <Image src="/logo.png" alt="" width={40} height={40} className="rounded-full" priority />
-                    <span className="font-display text-xl font-bold text-primary">{SITE.name}</span>
+                    <Image src="/logo.png" alt="" width={56} height={56} className="rounded-full" priority />
+                    <span className="font-display text-2xl font-bold text-primary">{SITE.name}</span>
                 </Link>
 
                 <div className="hidden items-center gap-6 md:flex">

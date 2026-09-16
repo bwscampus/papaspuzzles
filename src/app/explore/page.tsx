@@ -92,7 +92,7 @@ export default function ExplorePage() {
                         <p className="mb-4 text-sm text-muted" aria-live="polite">
                             {puzzles.length} puzzle{puzzles.length === 1 ? '' : 's'} available
                         </p>
-                        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                             {puzzles.map((p) => (
                                 <li key={p.id}>
                                     <PuzzleCard
