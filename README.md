@@ -63,12 +63,13 @@ and credit pick-ups charge at request and refund on cancel. Returning = balance 
 server). The picked puzzle is reserved immediately. The admin marks the trade completed after hand-off
 (puzzle → traded) or cancels it (puzzle → available again).
 
-**Donations.** Puzzles enter review. When the admin accepts a donation (or approves a puzzle from the Puzzles
-tab), each approved puzzle adds one credit to the submitter's ledger, attached to the puzzle so it can never
+**Donations.** Puzzles enter review. The admin accepts or rejects each puzzle from the Donations page (the
+Puzzles tab only edits and deletes); each accepted puzzle adds one credit to the submitter's ledger, attached to the puzzle so it can never
 double-count.
 
 **Credits.** Signed-in members pick up to `balance` available puzzles. Puzzles are reserved and credits deducted
-atomically; the admin fulfils the pick-up (→ claimed) or cancels it (→ available, credits refunded).
+atomically; the admin accepts the pick-up (→ claimed) or rejects it (→ available, credits refunded).
+A donation batch's status follows its puzzles: pending while any is under review, then accepted or rejected.
 
 **Puzzle statuses:** `pending_review → available → reserved → traded | claimed`, plus `rejected`.
 

@@ -92,21 +92,21 @@ export default function AdminTradesPage() {
                                     run(
                                         t.id,
                                         () => api.post(`/api/admin/trades/${t.id}`, { action: 'complete' }),
-                                        'Trade completed.'
+                                        'Trade accepted.'
                                     )
                                 }
                             >
-                                Complete
+                                Accept
                             </Button>
                             <ConfirmButton
-                                label="Cancel"
-                                confirmLabel="Cancel trade"
+                                label="Reject"
+                                confirmLabel="Reject trade"
                                 busy={busyId === t.id}
                                 onConfirm={() =>
                                     run(
                                         t.id,
                                         () => api.post(`/api/admin/trades/${t.id}`, { action: 'cancel' }),
-                                        'Trade cancelled; puzzle released.'
+                                        'Trade rejected; puzzle released and credit refunded.'
                                     )
                                 }
                             />

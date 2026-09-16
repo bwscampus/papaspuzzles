@@ -1,6 +1,5 @@
 import { conflict, notFound, validationError } from '@/lib/api';
-import { awardPuzzles, revokePuzzle } from '@/lib/credits';
-import { PUZZLE_STATUSES } from '@/lib/constants';
+import { syncBatchStatus } from './review';
 import { iso, query, queryOne, withTransaction, type Queryable } from '@/lib/db';
 import type { AdminPuzzle, Pieces, PublicPuzzle, PuzzleInput, PuzzleStatus, Theme } from '@/lib/types';
 
@@ -102,24 +101,10 @@ export async function adminCreate(input: PuzzleInput): Promise<AdminPuzzle> {
     return toAdminPuzzle(row as PuzzleRow);
 }
 
-/** Statuses an admin may set directly. Reservation and completion happen through trades/redemptions. */
-const ADMIN_SETTABLE: PuzzleStatus[] = ['pending_review', 'available', 'rejected'];
 const LOCKED: PuzzleStatus[] = ['reserved', 'traded', 'claimed'];
 
-export async function adminUpdate(
-    id: string,
-    patch: Partial<PuzzleInput> & { status?: PuzzleStatus }
-): Promise<AdminPuzzle> {
-    if (patch.status && !PUZZLE_STATUSES.includes(patch.status)) {
-        throw validationError('Invalid status.', 'status');
-    }
-    if (patch.status && !ADMIN_SETTABLE.includes(patch.status)) {
-        throw validationError(
-            'Puzzles become reserved, traded, or claimed through trades and pickups.',
-            'status'
-        );
-    }
-
+/** Edits a puzzle's details. Status changes happen through review, trades, and pickups. */
+export async function adminUpdate(id: string, patch: Partial<PuzzleInput>): Promise<AdminPuzzle> {
     return withTransaction(async (client) => {
         const current = await queryOne<PuzzleRow>(
             `select ${PUZZLE_COLUMNS} from puzzles where id = $1 for update`,
@@ -127,28 +112,21 @@ export async function adminUpdate(
             client
         );
         if (!current) throw notFound('Puzzle not found.');
-        if (patch.status && LOCKED.includes(current.status as PuzzleStatus)) {
-            throw conflict('This puzzle is part of a trade or pickup and cannot change status here.');
-        }
 
         const sets: string[] = [];
         const params: unknown[] = [];
-        const columns: Array<[keyof typeof patch, string]> = [
+        const columns: Array<[keyof PuzzleInput, string]> = [
             ['name', 'name'],
             ['pieces', 'pieces'],
             ['theme', 'theme'],
             ['condition', 'condition'],
             ['imageUrl', 'image_url'],
-            ['status', 'status'],
         ];
         for (const [key, column] of columns) {
             if (patch[key] !== undefined) {
                 params.push(patch[key]);
                 sets.push(`${column} = $${params.length}`);
             }
-        }
-        if (patch.status && patch.status !== 'pending_review') {
-            sets.push('reviewed_at = now()');
         }
         if (sets.length === 0) throw validationError('Nothing to update.');
 
@@ -158,11 +136,6 @@ export async function adminUpdate(
             params,
             client
         );
-        // Approving credits the submitter; rejecting an approved puzzle takes the credit back.
-        if (patch.status === 'available' && current.status !== 'available') await awardPuzzles(client, [id]);
-        if (patch.status && patch.status !== 'available' && current.status === 'available') {
-            await revokePuzzle(client, id);
-        }
         return toAdminPuzzle(row as PuzzleRow);
     });
 }
@@ -187,5 +160,7 @@ export async function adminDelete(id: string): Promise<void> {
         if (referenced)
             throw conflict('This puzzle is referenced by a trade or pickup and cannot be deleted.');
         await client.query('delete from puzzles where id = $1', [id]);
+        // A batch whose last pending puzzle was deleted should not stay under review.
+        if (current.donation_batch_id) await syncBatchStatus(client, current.donation_batch_id);
     });
 }

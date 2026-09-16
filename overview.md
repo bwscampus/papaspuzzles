@@ -28,19 +28,19 @@ Papa's Puzzles works as a puzzle trading system which trades puzzlers' old puzzl
 2. The puzzle you pick is reserved for you immediately so nobody else can take it.
 3. The puzzles you give go into review and appear on Explore once the admin approves them.
 4. You choose a drop-off date and a time slot (10 AM, 12 PM, 2 PM, or 4 PM).
-5. After the hand-off, the admin marks the trade **completed**: the puzzles you gave are approved and each adds a credit. If the trade does not happen, the admin **cancels** it, the picked puzzle goes back on Explore, and the credit is refunded.
+5. After the hand-off, the admin **accepts** the trade: the puzzles you gave are approved and each adds a credit. If the trade does not happen, the admin **rejects** it, the picked puzzle goes back on Explore, and the credit is refunded.
 
 ### Donate Now
 
 1. Enter your name, email, and one or more puzzles ("Add Another Puzzle" as many times as you like).
 2. Puzzles go into review. When the admin **accepts** your donation, the puzzles appear on Explore and you earn credits.
-3. Credits: each puzzle adds one credit when the admin approves it (accepting the donation, or approving the puzzle individually). Because everyone starts at −1, a first donation of one puzzle brings you to 0.
+3. Credits: each puzzle adds one credit when the admin accepts it. The admin reviews each puzzle in a donation individually (or accepts the rest of a donation at once). Because everyone starts at −1, a first donation of one puzzle brings you to 0.
 4. After submitting you see how the donation will move your balance once approved.
 
 ### Use Your Credits
 
 1. Sign in. With a balance above zero you can pick as many available puzzles as you have credits.
-2. The puzzles are reserved and the credits are deducted right away. The admin marks the pick-up **fulfilled** after hand-off, or **cancels** it and refunds the credits.
+2. The puzzles are reserved and the credits are deducted right away. The admin **accepts** the pick-up after hand-off, or **rejects** it and refunds the credits.
 
 ### Charity
 
@@ -74,11 +74,11 @@ The admin's review is the check that a photo is a real puzzle. There is no autom
 
 **Admin** (founder's account only) —
 
-- **Puzzles**: every puzzle with a status column; approve, reject, edit, delete.
+- **Puzzles**: every puzzle with a status column; edit and delete only. Accepting and rejecting happens on the Trades and Donations pages so those pages and this one never disagree. Deleting an accepted puzzle keeps the donor's credit.
 - **Add Inventory**: add puzzles with the same fields as Donate but without personal information.
 - **Users**: everyone who has made an account, with credits and trader status.
 - **Trades**: every trade with drop-off details; mark completed or cancelled.
-- **Donations & Credits**: pending donations to accept or reject; credits awarded; credit pick-ups to fulfil.
+- **Donations & Credits**: pending donations, reviewed puzzle by puzzle (accept, reject, restore) with an accept-all/reject-all for the rest of a batch; a donation shows as accepted once every puzzle is reviewed and at least one was accepted; credits awarded; credit pick-ups to accept or reject; an adjust-credits form and the ledger.
 
 ## 5. Out of scope for now
 

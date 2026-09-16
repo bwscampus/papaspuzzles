@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useMemo, useState, type FormEvent } from 'react';
 import { ConfirmButton } from '@/components/admin/ConfirmButton';
 import { DataTable, type Column } from '@/components/admin/DataTable';
 import { useAdminData } from '@/components/admin/useAdminData';
@@ -12,7 +12,7 @@ import { useToast } from '@/context/ToastContext';
 import { Spinner } from '@/components/ui/Spinner';
 import { api, errorMessage } from '@/lib/client/api';
 import { BATCH_STATUSES, REDEMPTION_STATUSES, pieceLabel } from '@/lib/constants';
-import type { AdminDonationBatch, CreditEntry, RedemptionSummary } from '@/lib/types';
+import type { AdminDonationBatch, AdminPuzzle, CreditEntry, RedemptionSummary } from '@/lib/types';
 
 const REASONS: Record<CreditEntry['reason'], string> = {
     donation_accepted: 'Donation accepted',
@@ -33,10 +33,27 @@ function Loading() {
     );
 }
 
+type ReviewResult = { puzzle: AdminPuzzle; balance: number };
+
 function Batches() {
     const [status, setStatus] = useState('pending_review');
     const { data, error, run, busyId } = useAdminData<AdminDonationBatch[]>(
         `/api/admin/donation-batches${status ? `?status=${status}` : ''}`
+    );
+
+    const review = useCallback(
+        (b: AdminDonationBatch, p: AdminPuzzle, action: 'accept' | 'reject' | 'restore') =>
+            run(
+                p.id,
+                () => api.post<ReviewResult>(`/api/admin/puzzles/${p.id}/review`, { action }),
+                (r) => {
+                    const { balance } = r as ReviewResult;
+                    const verb =
+                        action === 'accept' ? 'accepted' : action === 'reject' ? 'rejected' : 'restored';
+                    return `Puzzle ${verb}. ${b.donorEmail} now has ${balance} credit${balance === 1 ? '' : 's'}.`;
+                }
+            ),
+        [run]
     );
 
     const columns = useMemo<Column<AdminDonationBatch>[]>(
@@ -56,20 +73,49 @@ function Batches() {
                 key: 'puzzles',
                 header: 'Puzzles',
                 render: (b) => (
-                    <ul className="flex flex-col gap-1">
-                        {b.puzzles.map((p) => (
-                            <li key={p.id} className="flex items-center gap-2">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={p.imageUrl} alt="" className="h-8 w-8 rounded object-cover" />
-                                <span>
-                                    {p.name}{' '}
-                                    <span className="text-xs text-muted">
-                                        ({pieceLabel(p.pieces)} · {p.theme})
+                    <ul className="flex flex-col gap-2">
+                        {b.puzzles.map((p) => {
+                            const busy = busyId === p.id;
+                            return (
+                                <li key={p.id} className="flex flex-wrap items-center gap-2">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={p.imageUrl} alt="" className="h-8 w-8 rounded object-cover" />
+                                    <span>
+                                        {p.name}{' '}
+                                        <span className="text-xs text-muted">
+                                            ({pieceLabel(p.pieces)} · {p.theme})
+                                        </span>
                                     </span>
-                                </span>
-                                {b.status !== 'pending_review' && <StatusBadge status={p.status} />}
-                            </li>
-                        ))}
+                                    <StatusBadge status={p.status} />
+                                    {p.status === 'pending_review' && (
+                                        <span className="flex gap-1">
+                                            <Button
+                                                size="sm"
+                                                loading={busy}
+                                                onClick={() => review(b, p, 'accept')}
+                                            >
+                                                Accept
+                                            </Button>
+                                            <ConfirmButton
+                                                label="Reject"
+                                                busy={busy}
+                                                onConfirm={() => review(b, p, 'reject')}
+                                            />
+                                        </span>
+                                    )}
+                                    {p.status === 'rejected' && (
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            loading={busy}
+                                            onClick={() => review(b, p, 'restore')}
+                                        >
+                                            Restore
+                                        </Button>
+                                    )}
+                                </li>
+                            );
+                        })}
                     </ul>
                 ),
             },
@@ -77,25 +123,21 @@ function Batches() {
                 key: 'credits',
                 header: 'Credits',
                 render: (b) =>
-                    b.creditsAwarded === null ? (
-                        <span className="text-muted">—</span>
-                    ) : (
-                        <span>
-                            {b.creditsAwarded}
-                            {b.wasFirstBatch && <span className="block text-xs text-muted">first batch</span>}
-                        </span>
-                    ),
+                    b.creditsAwarded === null ? <span className="text-muted">—</span> : b.creditsAwarded,
             },
             { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
             {
                 key: 'actions',
                 header: 'Actions',
                 className: 'text-right',
-                render: (b) =>
-                    b.status === 'pending_review' ? (
+                render: (b) => {
+                    const pending = b.puzzles.filter((p) => p.status === 'pending_review').length;
+                    if (pending < 2) return null;
+                    return (
                         <div className="flex justify-end gap-1">
                             <Button
                                 size="sm"
+                                variant="outline"
                                 loading={busyId === b.id}
                                 onClick={() =>
                                     run(
@@ -110,15 +152,16 @@ function Batches() {
                                                 creditsAwarded: number;
                                                 puzzlesPublished: number;
                                             };
-                                            return `Published ${res.puzzlesPublished} puzzle(s); ${res.creditsAwarded} credit(s) awarded.`;
+                                            return `Accepted ${res.puzzlesPublished} puzzle(s); ${res.creditsAwarded} credit(s) for this donation.`;
                                         }
                                     )
                                 }
                             >
-                                Accept
+                                Accept all
                             </Button>
                             <ConfirmButton
-                                label="Reject"
+                                label="Reject all"
+                                confirmLabel="Reject all"
                                 busy={busyId === b.id}
                                 onConfirm={() =>
                                     run(
@@ -127,15 +170,16 @@ function Batches() {
                                             api.post(`/api/admin/donation-batches/${b.id}`, {
                                                 action: 'reject',
                                             }),
-                                        'Donation rejected.'
+                                        'Remaining puzzles rejected.'
                                     )
                                 }
                             />
                         </div>
-                    ) : null,
+                    );
+                },
             },
         ],
-        [busyId, run]
+        [busyId, run, review]
     );
 
     return (
@@ -212,22 +256,22 @@ function Pickups() {
                                         r.id,
                                         () =>
                                             api.post(`/api/admin/redemptions/${r.id}`, { action: 'fulfill' }),
-                                        'Pick-up fulfilled.'
+                                        'Pick-up accepted.'
                                     )
                                 }
                             >
-                                Fulfil
+                                Accept
                             </Button>
                             <ConfirmButton
-                                label="Cancel"
-                                confirmLabel="Cancel & refund"
+                                label="Reject"
+                                confirmLabel="Reject & refund"
                                 busy={busyId === r.id}
                                 onConfirm={() =>
                                     run(
                                         r.id,
                                         () =>
                                             api.post(`/api/admin/redemptions/${r.id}`, { action: 'cancel' }),
-                                        'Pick-up cancelled; credits refunded.'
+                                        'Pick-up rejected; credits refunded.'
                                     )
                                 }
                             />

@@ -88,7 +88,6 @@ check "batch listed" "true" "$([ -n "$BATCH" ] && echo true || echo false)"
 call POST "/api/admin/donation-batches/$BATCH" "$A" '{"action":"accept"}'
 check "accept 200" 200 "$STATUS"
 check "credits awarded = puzzles approved" 2 "$(field data.creditsAwarded)"
-check "was first batch" "true" "$(field data.wasFirstBatch)"
 call POST "/api/admin/donation-batches/$BATCH" "$A" '{"action":"accept"}'
 check "accept twice 409" 409 "$STATUS"
 call GET /api/puzzles ""
@@ -181,7 +180,11 @@ ADMINP=$(field data.id)
 call PATCH "/api/admin/puzzles/$ADMINP" "$A" '{"status":"traded"}'
 check "admin cannot set traded directly 400" 400 "$STATUS"
 call PATCH "/api/admin/puzzles/$ADMINP" "$A" '{"name":"Admin Renamed","status":"rejected"}'
-check "admin edit + reject 200" 200 "$STATUS"
+check "status via edit 400 (review lives on Donations/Trades)" 400 "$STATUS"
+call PATCH "/api/admin/puzzles/$ADMINP" "$A" '{"name":"Admin Renamed"}'
+check "admin edit 200" 200 "$STATUS"
+call POST "/api/admin/puzzles/$ADMINP/review" "$A" '{"action":"accept"}'
+check "admin inventory is not reviewable 409" 409 "$STATUS"
 call DELETE "/api/admin/puzzles/$ADMINP" "$A"
 check "admin delete 200" 200 "$STATUS"
 call GET /api/admin/users "$A"
@@ -191,25 +194,54 @@ echo "== per-puzzle credits and admin adjustment"
 call POST /api/admin/credit-entries "$A" "{\"email\":\"$GUEST\",\"delta\":1,\"note\":\"smoke\"}"
 check "admin adjustment 201" 201 "$STATUS"
 check "adjusted balance = 2" 2 "$(field data.balance)"
-call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"puzzles\":[$(P "Smoke D $RUN" 100 Other)]}"
+call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"puzzles\":[$(P "Smoke D $RUN" 100 Other),$(P "Smoke E $RUN" 300 Art)]}"
 BATCH3=$(field data.batchId)
-call GET "/api/admin/donation-batches?status=pending_review" "$A"
-PZ=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const b=JSON.parse(s).data.find(b=>b.id===process.argv[1]);console.log(b?b.puzzles[0].id:"")})' "$BATCH3")
-call PATCH "/api/admin/puzzles/$PZ" "$A" '{"status":"available"}'
-check "approve single puzzle 200" 200 "$STATUS"
-call GET /api/me/credits "$U"
-check "single approval credits +1 (3)" 3 "$(field data.balance)"
+batch() { curl -s -b "$A" "$BASE/api/admin/donation-batches" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const b=JSON.parse(s).data.find(b=>b.id===process.argv[1]);const k=process.argv[2];console.log(!b?"":k==="puzzle0"?b.puzzles[0].id:k==="puzzle1"?b.puzzles[1].id:k==="p0status"?b.puzzles[0].status:k==="p1status"?b.puzzles[1].status:String(b[k]))})' "$BATCH3" "$1"; }
+PZ=$(batch puzzle0); PZ2=$(batch puzzle1)
+call POST "/api/admin/puzzles/$PZ/review" "$A" '{"action":"accept"}'
+check "accept one puzzle of two 200" 200 "$STATUS"
+check "review returns donor balance (3)" 3 "$(field data.balance)"
+check "batch still pending while one puzzle awaits review" "pending_review" "$(batch status)"
+check "batch credits unknown while pending" "null" "$(batch creditsAwarded)"
+call POST "/api/admin/puzzles/$PZ/review" "$A" '{"action":"accept"}'
+check "accept twice 409" 409 "$STATUS"
+call POST "/api/admin/puzzles/$PZ2/review" "$A" '{"action":"reject"}'
+check "reject the other puzzle 200" 200 "$STATUS"
+check "batch accepted once all reviewed" "accepted" "$(batch status)"
+check "batch credits = 1" 1 "$(batch creditsAwarded)"
 call POST "/api/admin/donation-batches/$BATCH3" "$A" '{"action":"accept"}'
-check "batch accept after manual approval 400" 400 "$STATUS"
-call PATCH "/api/admin/puzzles/$PZ" "$A" '{"status":"rejected"}'
+check "accept all with nothing pending 409" 409 "$STATUS"
+call POST "/api/admin/puzzles/$PZ2/review" "$A" '{"action":"restore"}'
+check "restore rejected puzzle 200" 200 "$STATUS"
+check "restore credits +1 (4)" 4 "$(field data.balance)"
+check "batch credits = 2" 2 "$(batch creditsAwarded)"
+call POST "/api/admin/puzzles/$PZ2/review" "$A" '{"action":"restore"}'
+check "restore an available puzzle 409" 409 "$STATUS"
+call POST "/api/admin/puzzles/$PZ2/review" "$A" '{"action":"reject"}'
 call GET /api/me/credits "$U"
-check "rejecting approved puzzle -1 (2)" 2 "$(field data.balance)"
-call PATCH "/api/admin/puzzles/$PZ" "$A" '{"status":"available"}'
+check "rejecting approved puzzle -1 (3)" 3 "$(field data.balance)"
+call POST "/api/admin/puzzles/$PZ2/review" "$A" '{"action":"restore"}'
 call GET /api/me/credits "$U"
-check "re-approval credits again (3)" 3 "$(field data.balance)"
-call PATCH "/api/admin/puzzles/$PZ" "$A" '{"status":"available"}'
+check "restore does not double count (4)" 4 "$(field data.balance)"
+call POST "/api/admin/puzzles/$WANT/review" "$A" '{"action":"reject"}'
+check "traded puzzle cannot be rejected 409" 409 "$STATUS"
+call GET "/api/admin/trades?status=completed" "$A"
+GIVEN=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s).data.find(t=>t.id===process.argv[1]);console.log(t?t.given[0].id:"")})' "$TRADE")
+call POST "/api/admin/puzzles/$GIVEN/review" "$A" '{"action":"reject"}'
+check "trade puzzles are reviewed through the trade 409" 409 "$STATUS"
+call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"puzzles\":[$(P "Smoke F $RUN" 100 Other),$(P "Smoke G $RUN" 300 Art)]}"
+BATCH4=$(field data.batchId)
+call POST "/api/admin/donation-batches/$BATCH4" "$A" '{"action":"accept"}'
+check "accept all 200" 200 "$STATUS"
+check "accept all publishes both" 2 "$(field data.puzzlesPublished)"
 call GET /api/me/credits "$U"
-check "approving twice does not double count (3)" 3 "$(field data.balance)"
+check "accept all credits +2 (6)" 6 "$(field data.balance)"
+call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"puzzles\":[$(P "Smoke H $RUN" 100 Other)]}"
+BATCH5=$(field data.batchId)
+PZ5=$(curl -s -b "$A" "$BASE/api/admin/donation-batches?status=pending_review" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const b=JSON.parse(s).data.find(b=>b.id===process.argv[1]);console.log(b?b.puzzles[0].id:"")})' "$BATCH5")
+call DELETE "/api/admin/puzzles/$PZ5" "$A"
+check "delete pending puzzle 200" 200 "$STATUS"
+check "batch with no puzzles left is not pending" "rejected" "$(curl -s -b "$A" "$BASE/api/admin/donation-batches" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const b=JSON.parse(s).data.find(b=>b.id===process.argv[1]);console.log(b?b.status:"")})' "$BATCH5")"
 
 echo
 echo "passed: $PASS  failed: $FAIL"
