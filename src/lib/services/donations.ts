@@ -1,7 +1,6 @@
 import { conflict, notFound, validationError } from '@/lib/api';
-import { creditsForBatch } from '@/lib/credits';
+import { awardPuzzles, getCreditBalance } from '@/lib/credits';
 import { iso, query, queryOne, withTransaction, type Queryable } from '@/lib/db';
-import { isReturningTrader } from '@/lib/trader';
 import type { AdminDonationBatch, BatchStatus, DonationBatchSummary, PuzzleInput } from '@/lib/types';
 import { PUZZLE_COLUMNS, toAdminPuzzle, type PuzzleRow } from './puzzles';
 
@@ -47,7 +46,12 @@ export interface SubmitDonationResult {
     batchId: string;
     puzzleCount: number;
     returning: boolean;
+    /** Balance now, before approval. */
+    balance: number;
+    /** Credits this donation adds once approved (one per puzzle). */
     estimatedCredits: number;
+    /** Balance after approval. */
+    estimatedBalance: number;
 }
 
 export async function submitDonation(input: SubmitDonationInput): Promise<SubmitDonationResult> {
@@ -69,12 +73,14 @@ export async function submitDonation(input: SubmitDonationInput): Promise<Submit
             );
         }
 
-        const returning = await isReturningTrader(input.email, client);
+        const balance = await getCreditBalance(input.email, client);
         return {
             batchId,
             puzzleCount: input.puzzles.length,
-            returning,
-            estimatedCredits: creditsForBatch(input.puzzles.length, !returning),
+            returning: balance >= 0,
+            balance,
+            estimatedCredits: input.puzzles.length,
+            estimatedBalance: balance + input.puzzles.length,
         };
     });
 }
@@ -110,13 +116,17 @@ export async function acceptDonationBatch(id: string): Promise<AcceptResult> {
             throw validationError('No puzzles in this donation are awaiting review. Reject it instead.');
         }
 
-        const wasFirstBatch = !(await isReturningTrader(batch.donor_email, client));
-        const credits = creditsForBatch(count, wasFirstBatch);
+        const wasFirstBatch = (await getCreditBalance(batch.donor_email, client)) < 0;
 
-        await client.query(
+        const { rows: approved } = await client.query<{ id: string }>(
             `update puzzles set status = 'available', reviewed_at = now()
-             where donation_batch_id = $1 and status = 'pending_review'`,
+             where donation_batch_id = $1 and status = 'pending_review' returning id`,
             [id]
+        );
+        // One credit per approved puzzle, attached to the puzzle so it can never double-count.
+        const credits = await awardPuzzles(
+            client,
+            approved.map((r) => r.id)
         );
         await client.query(
             `update donation_batches
@@ -124,14 +134,6 @@ export async function acceptDonationBatch(id: string): Promise<AcceptResult> {
              where id = $1`,
             [id, credits, wasFirstBatch]
         );
-        if (credits > 0) {
-            await client.query(
-                `insert into credit_entries (email, delta, reason, donation_batch_id)
-                 values ($1, $2, 'donation_accepted', $3)`,
-                [batch.donor_email, credits, id]
-            );
-        }
-
         return { creditsAwarded: credits, wasFirstBatch, puzzlesPublished: count };
     });
 }

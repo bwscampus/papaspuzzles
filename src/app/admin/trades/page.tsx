@@ -138,7 +138,7 @@ export default function AdminTradesPage() {
             {error ? (
                 <Alert tone="error">{error}</Alert>
             ) : data === null ? (
-                <div className="flex justify-center py-16 text-primary">
+                <div className="flex justify-center py-16 text-primary-text">
                     <Spinner className="h-8 w-8" />
                 </div>
             ) : (

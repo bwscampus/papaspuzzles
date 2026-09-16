@@ -8,7 +8,7 @@ export function Footer() {
                 {SITE.disclaimer}{' '}
                 <a
                     href={`mailto:${SITE.contactEmail}`}
-                    className="font-semibold text-primary hover:underline"
+                    className="font-semibold text-primary-text hover:underline"
                 >
                     {SITE.contactEmail}
                 </a>
@@ -19,10 +19,10 @@ export function Footer() {
                     © {new Date().getFullYear()} {SITE.name}. {SITE.phrase}
                 </p>
                 <div className="flex items-center gap-5">
-                    <Link href="/about" className="hover:text-primary">
+                    <Link href="/about" className="hover:text-primary-text">
                         About Us
                     </Link>
-                    <a href={`mailto:${SITE.contactEmail}`} className="hover:text-primary">
+                    <a href={`mailto:${SITE.contactEmail}`} className="hover:text-primary-text">
                         {SITE.contactEmail}
                     </a>
                 </div>

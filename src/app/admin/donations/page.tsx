@@ -1,20 +1,25 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { ConfirmButton } from '@/components/admin/ConfirmButton';
 import { DataTable, type Column } from '@/components/admin/DataTable';
 import { useAdminData } from '@/components/admin/useAdminData';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Field';
+import { Input, Select } from '@/components/ui/Field';
+import { useToast } from '@/context/ToastContext';
 import { Spinner } from '@/components/ui/Spinner';
-import { api } from '@/lib/client/api';
+import { api, errorMessage } from '@/lib/client/api';
 import { BATCH_STATUSES, REDEMPTION_STATUSES, pieceLabel } from '@/lib/constants';
 import type { AdminDonationBatch, CreditEntry, RedemptionSummary } from '@/lib/types';
 
 const REASONS: Record<CreditEntry['reason'], string> = {
     donation_accepted: 'Donation accepted',
+    puzzle_added: 'Puzzle approved',
+    puzzle_removed: 'Approved puzzle rejected',
+    trade_taken: 'Puzzle taken in a trade',
+    trade_cancelled: 'Trade cancelled (refund)',
     redemption: 'Credits spent',
     redemption_cancelled: 'Pick-up cancelled (refund)',
     admin_adjustment: 'Adjustment',
@@ -22,7 +27,7 @@ const REASONS: Record<CreditEntry['reason'], string> = {
 
 function Loading() {
     return (
-        <div className="flex justify-center py-12 text-primary">
+        <div className="flex justify-center py-12 text-primary-text">
             <Spinner className="h-8 w-8" />
         </div>
     );
@@ -259,8 +264,62 @@ function Pickups() {
     );
 }
 
+function AdjustCredits({ onDone }: { onDone: () => void }) {
+    const toast = useToast();
+    const [email, setEmail] = useState('');
+    const [delta, setDelta] = useState('1');
+    const [note, setNote] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    const submit = async (e: FormEvent) => {
+        e.preventDefault();
+        setBusy(true);
+        try {
+            const r = await api.post<{ email: string; balance: number }>('/api/admin/credit-entries', {
+                email,
+                delta: Number(delta),
+                note,
+            });
+            toast.success(`${r.email} now has ${r.balance} credit${r.balance === 1 ? '' : 's'}.`);
+            setNote('');
+            onDone();
+        } catch (err) {
+            toast.error(errorMessage(err));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <form
+            onSubmit={submit}
+            noValidate
+            className="flex flex-wrap items-end gap-3 rounded-2xl bg-white p-4 shadow-card"
+        >
+            <Input
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-64"
+            />
+            <Input
+                label="Credits (+/−)"
+                type="number"
+                value={delta}
+                onChange={(e) => setDelta(e.target.value)}
+                className="w-28"
+            />
+            <Input label="Note" value={note} onChange={(e) => setNote(e.target.value)} className="w-64" />
+            <Button type="submit" loading={busy}>
+                Adjust
+            </Button>
+        </form>
+    );
+}
+
 function Ledger() {
-    const { data, error } = useAdminData<CreditEntry[]>('/api/admin/credit-entries');
+    const { data, error, reload } = useAdminData<CreditEntry[]>('/api/admin/credit-entries');
     const columns = useMemo<Column<CreditEntry>[]>(
         () => [
             { key: 'date', header: 'Date', render: (e) => new Date(e.createdAt).toLocaleString() },
@@ -284,6 +343,7 @@ function Ledger() {
             <h2 id="ledger-h" className="text-2xl">
                 Credit ledger
             </h2>
+            <AdjustCredits onDone={() => void reload()} />
             {error ? (
                 <Alert tone="error">{error}</Alert>
             ) : data === null ? (

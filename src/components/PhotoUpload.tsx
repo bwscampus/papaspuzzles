@@ -57,7 +57,7 @@ export function PhotoUpload({
                     <div className="absolute inset-x-0 bottom-0 flex justify-between bg-white/90 px-3 py-2 text-sm">
                         <label
                             htmlFor={id}
-                            className="cursor-pointer font-semibold text-primary hover:underline"
+                            className="cursor-pointer font-semibold text-primary-text hover:underline"
                         >
                             Replace photo
                         </label>
@@ -73,20 +73,20 @@ export function PhotoUpload({
             ) : (
                 <label
                     htmlFor={id}
-                    className={`flex h-44 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed bg-white text-sm text-muted hover:border-primary hover:text-primary ${
+                    className={`flex h-44 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed bg-white text-sm text-muted hover:border-primary hover:text-primary-text ${
                         message ? 'border-danger' : 'border-rose/60'
                     }`}
                 >
                     {busy ? (
                         <>
-                            <Spinner className="h-6 w-6 text-primary" label="Uploading" />
+                            <Spinner className="h-6 w-6 text-primary-text" label="Uploading" />
                             Uploading…
                         </>
                     ) : (
                         <>
                             <Camera className="h-7 w-7" aria-hidden="true" />
                             <span>
-                                <span className="font-semibold text-primary">Choose a photo</span> of the
+                                <span className="font-semibold text-primary-text">Choose a photo</span> of the
                                 puzzle
                             </span>
                             <span className="text-xs">JPEG, PNG, WebP, GIF, or HEIC · up to 10 MB</span>

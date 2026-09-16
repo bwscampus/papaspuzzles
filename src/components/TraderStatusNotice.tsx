@@ -75,16 +75,16 @@ export function TraderStatusNotice({
         );
     }
 
-    const { puzzlesAdded } = lookup.status;
-    return lookup.status.returning ? (
+    const { balance, requiredGiven } = lookup.status;
+    return requiredGiven === 1 ? (
         <Alert tone="success" title="Welcome back!">
-            You have added {puzzlesAdded} puzzle{puzzlesAdded === 1 ? '' : 's'} to the site, so you trade one
-            for one.
+            You have {balance} credit{balance === 1 ? '' : 's'}, so you trade one puzzle for one.
+            {balance >= 1 && ' You could also take a puzzle with a credit on the Use Your Credits page.'}
         </Alert>
     ) : (
-        <Alert tone="info" title="First puzzle?">
-            Traders who have not added a puzzle yet give two and pick one. Once one of your puzzles is
-            approved, you trade one for one.
+        <Alert tone="info" title="First trade?">
+            Everyone starts at −1 credit, so your first trade is {requiredGiven} puzzles for one. Each puzzle
+            you give is worth a credit once approved; after that you trade one for one.
         </Alert>
     );
 }

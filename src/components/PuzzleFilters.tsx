@@ -32,7 +32,7 @@ export function PuzzleFilters({ value, onChange }: { value: Filters; onChange: (
                 <button
                     type="button"
                     onClick={() => onChange({ theme: '', pieces: '' })}
-                    className="pb-2.5 text-sm font-semibold text-primary hover:underline"
+                    className="pb-2.5 text-sm font-semibold text-primary-text hover:underline"
                 >
                     Clear filters
                 </button>

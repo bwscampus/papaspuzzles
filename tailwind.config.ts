@@ -7,7 +7,8 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
-                primary: { DEFAULT: '#7E4B57', hover: '#5E3641' },
+                // Button fill matches the logo's dusty-rose background; dark ink text on it is 6.2:1.
+                primary: { DEFAULT: '#C49AA2', hover: '#B3868F', text: '#7E4B57' },
                 rose: { DEFAULT: '#C49AA2', tint: '#F3E3E6', faint: '#FBF4F5' },
                 accent: { DEFAULT: '#F2A48E', text: '#A8503A' },
                 page: '#FFFBEA',

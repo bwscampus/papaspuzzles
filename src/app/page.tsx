@@ -65,7 +65,7 @@ export default function HomePage() {
 
             <section className="bg-cream">
                 <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
-                    <blockquote className="font-display text-2xl font-bold leading-snug text-primary sm:text-3xl">
+                    <blockquote className="font-display text-2xl font-bold leading-snug text-primary-text sm:text-3xl">
                         “{SITE.quote}”
                     </blockquote>
                     <p className="mt-4 text-sm text-muted">

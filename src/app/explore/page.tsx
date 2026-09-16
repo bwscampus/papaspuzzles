@@ -13,7 +13,7 @@ import { api, errorMessage } from '@/lib/client/api';
 import type { PublicPuzzle } from '@/lib/types';
 
 export default function ExplorePage() {
-    const { user } = useAuth();
+    const { user, balance } = useAuth();
     const [filters, setFilters] = useState<Filters>({ theme: '', pieces: '' });
     const [puzzles, setPuzzles] = useState<PublicPuzzle[] | null>(null);
     const [error, setError] = useState('');
@@ -59,7 +59,7 @@ export default function ExplorePage() {
                         </Button>
                     </Alert>
                 ) : puzzles === null ? (
-                    <div className="flex justify-center py-20 text-primary">
+                    <div className="flex justify-center py-20 text-primary-text">
                         <Spinner className="h-8 w-8" />
                     </div>
                 ) : puzzles.length === 0 ? (
@@ -106,7 +106,7 @@ export default function ExplorePage() {
                                                 >
                                                     Start a Trade
                                                 </Button>
-                                                {user && (
+                                                {user && (balance ?? 0) >= 1 && (
                                                     <Button
                                                         href={`/credits?pick=${p.id}`}
                                                         size="sm"

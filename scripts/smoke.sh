@@ -74,7 +74,9 @@ P() { echo "{\"name\":\"$1\",\"pieces\":$2,\"theme\":\"$3\",\"imageUrl\":\"$IMG\
 echo "== donations and credits"
 call POST /api/donations "" "{\"name\":\"Guest Person\",\"email\":\"$GUEST\",\"puzzles\":[$(P "Smoke A $RUN" 500 Animals),$(P "Smoke B $RUN" 1000 Art)]}"
 check "guest donation 201" 201 "$STATUS"
-check "new donor estimate = count-1" 1 "$(field data.estimatedCredits)"
+check "new donor starts at -1" -1 "$(field data.balance)"
+check "estimate = one credit per puzzle" 2 "$(field data.estimatedCredits)"
+check "estimated balance after approval" 1 "$(field data.estimatedBalance)"
 call POST /api/donations "" "{\"name\":\"X\",\"email\":\"$GUEST\",\"puzzles\":[{\"name\":\"Bad\",\"pieces\":750,\"theme\":\"Art\",\"condition\":\"good\",\"imageUrl\":\"$IMG\"}]}"
 check "invalid pieces 400" 400 "$STATUS"
 check "field path reported" "puzzles.0.pieces" "$(field error.field)"
@@ -85,7 +87,7 @@ BATCH=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("en
 check "batch listed" "true" "$([ -n "$BATCH" ] && echo true || echo false)"
 call POST "/api/admin/donation-batches/$BATCH" "$A" '{"action":"accept"}'
 check "accept 200" 200 "$STATUS"
-check "credits awarded = 1" 1 "$(field data.creditsAwarded)"
+check "credits awarded = puzzles approved" 2 "$(field data.creditsAwarded)"
 check "was first batch" "true" "$(field data.wasFirstBatch)"
 call POST "/api/admin/donation-batches/$BATCH" "$A" '{"action":"accept"}'
 check "accept twice 409" 409 "$STATUS"
@@ -113,10 +115,12 @@ call POST /api/trades "" "{$TRADE_BASE,\"givenPuzzles\":[$(P 'Given 1' 500 Movie
 check "new trader with 2 puzzles 201" 201 "$STATUS"
 check "tier snapshot new" "new" "$(field data.tier)"
 TRADE=$(field data.tradeId)
+call GET "/api/trader-status?email=$TRADER" ""
+check "credit charged at request (-2)" -2 "$(field data.balance)"
 call GET /api/puzzles ""
 check "wanted puzzle reserved (gone from Explore)" "" "$(echo "$BODY" | grep -o "$WANT")"
-call POST /api/trades "" "{$TRADE_BASE,\"givenPuzzles\":[$(P 'G' 500 Movies),$(P 'G' 500 Movies)]}"
-check "reserved puzzle cannot be picked 409" 409 "$STATUS"
+call POST /api/trades "" "{$TRADE_BASE,\"givenPuzzles\":[$(P 'G' 500 Movies),$(P 'G' 500 Movies),$(P 'G' 500 Movies)]}"
+check "reserved puzzle cannot be picked 409 (balance -2 needs 3 pledged)" 409 "$STATUS"
 call DELETE "/api/admin/puzzles/$WANT" "$A"
 check "reserved puzzle cannot be deleted 409" 409 "$STATUS"
 call POST "/api/admin/trades/$TRADE" "$A" '{"action":"complete"}'
@@ -124,6 +128,7 @@ check "complete trade 200" 200 "$STATUS"
 check "received puzzle traded" "traded" "$(curl -s -b "$A" "$BASE/api/admin/puzzles?status=traded" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const p=JSON.parse(s).data.find(p=>p.id===process.argv[1]);console.log(p?p.status:"")})' "$WANT")"
 call GET "/api/trader-status?email=$TRADER" ""
 check "trader now returning (needs 1)" 1 "$(field data.requiredGiven)"
+check "balance 0 after completion (+2 approved, -1 taken)" 0 "$(field data.balance)"
 check "given puzzles approved on completion" 2 "$(curl -s -b "$A" "$BASE/api/admin/trades?status=completed" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s).data.find(t=>t.id===process.argv[1]);console.log(t?t.given.filter(g=>g.status==="available").length:"")})' "$TRADE")"
 check "puzzlesAdded counted" 2 "$(field data.puzzlesAdded)"
 call POST /api/trades "" "{\"name\":\"Trader\",\"email\":\"$TRADER\",\"wantedPuzzleId\":\"$WANT\",\"dropoffDate\":\"2099-01-05\",\"dropoffSlot\":\"10:00\",\"givenPuzzles\":[$(P G 500 Movies),$(P G 500 Movies)]}"
@@ -135,6 +140,8 @@ check "returning trader 1-for-1 201" 201 "$STATUS"
 TRADE2=$(field data.tradeId)
 call POST "/api/admin/trades/$TRADE2" "$A" '{"action":"cancel"}'
 check "cancel trade 200" 200 "$STATUS"
+call GET "/api/trader-status?email=$TRADER" ""
+check "refund on cancel (back to 0)" 0 "$(field data.balance)"
 call GET /api/puzzles ""
 check "cancelled trade releases puzzle" "$WANT2" "$(echo "$BODY" | grep -o "$WANT2" | head -1)"
 check "given puzzle rejected on cancel" "rejected" "$(echo "$BODY" >/dev/null; curl -s -b "$A" "$BASE/api/admin/trades?status=cancelled" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s).data.find(t=>t.id===process.argv[1]);console.log(t?t.given[0].status:"")})' "$TRADE2")"
@@ -179,6 +186,30 @@ call DELETE "/api/admin/puzzles/$ADMINP" "$A"
 check "admin delete 200" 200 "$STATUS"
 call GET /api/admin/users "$A"
 check "users list includes guest with balance" 1 "$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const u=JSON.parse(s).data.find(u=>u.email===process.argv[1]);console.log(u?u.creditBalance:"")})' "$GUEST")"
+
+echo "== per-puzzle credits and admin adjustment"
+call POST /api/admin/credit-entries "$A" "{\"email\":\"$GUEST\",\"delta\":1,\"note\":\"smoke\"}"
+check "admin adjustment 201" 201 "$STATUS"
+check "adjusted balance = 2" 2 "$(field data.balance)"
+call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"puzzles\":[$(P "Smoke D $RUN" 100 Other)]}"
+BATCH3=$(field data.batchId)
+call GET "/api/admin/donation-batches?status=pending_review" "$A"
+PZ=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const b=JSON.parse(s).data.find(b=>b.id===process.argv[1]);console.log(b?b.puzzles[0].id:"")})' "$BATCH3")
+call PATCH "/api/admin/puzzles/$PZ" "$A" '{"status":"available"}'
+check "approve single puzzle 200" 200 "$STATUS"
+call GET /api/me/credits "$U"
+check "single approval credits +1 (3)" 3 "$(field data.balance)"
+call POST "/api/admin/donation-batches/$BATCH3" "$A" '{"action":"accept"}'
+check "batch accept after manual approval 400" 400 "$STATUS"
+call PATCH "/api/admin/puzzles/$PZ" "$A" '{"status":"rejected"}'
+call GET /api/me/credits "$U"
+check "rejecting approved puzzle -1 (2)" 2 "$(field data.balance)"
+call PATCH "/api/admin/puzzles/$PZ" "$A" '{"status":"available"}'
+call GET /api/me/credits "$U"
+check "re-approval credits again (3)" 3 "$(field data.balance)"
+call PATCH "/api/admin/puzzles/$PZ" "$A" '{"status":"available"}'
+call GET /api/me/credits "$U"
+check "approving twice does not double count (3)" 3 "$(field data.balance)"
 
 echo
 echo "passed: $PASS  failed: $FAIL"

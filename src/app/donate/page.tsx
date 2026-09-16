@@ -20,7 +20,9 @@ import {
 
 interface Result {
     puzzleCount: number;
+    balance: number;
     estimatedCredits: number;
+    estimatedBalance: number;
     returning: boolean;
 }
 
@@ -91,12 +93,9 @@ export default function DonatePage() {
             <PageShell title="Thank you!" width="narrow">
                 <Card>
                     <p className="text-lg">
-                        We received {result.puzzleCount} puzzle{result.puzzleCount === 1 ? '' : 's'}. Once
-                        approved, you&apos;ll have about{' '}
-                        <strong>
-                            {result.estimatedCredits} credit{result.estimatedCredits === 1 ? '' : 's'}
-                        </strong>
-                        {result.returning ? '' : ' (first donations earn one less than the puzzle count)'}.
+                        We received {result.puzzleCount} puzzle{result.puzzleCount === 1 ? '' : 's'}. Each one
+                        adds a credit once approved, taking your balance from{' '}
+                        <strong>{result.balance}</strong> to <strong>{result.estimatedBalance}</strong>.
                     </p>
                     <p className="mt-3 text-muted">
                         We review every puzzle before it goes on Explore. Credits are added to your email as
@@ -169,8 +168,8 @@ export default function DonatePage() {
 
                 <div className="flex items-center justify-between gap-4">
                     <p className="text-sm text-muted">
-                        First donation: earn one credit less than the puzzle count. After that: one credit per
-                        puzzle.
+                        Everyone starts at −1 credit. Each approved puzzle adds one; each puzzle you take
+                        costs one.
                     </p>
                     <Button type="submit" size="lg" loading={busy}>
                         Submit donation

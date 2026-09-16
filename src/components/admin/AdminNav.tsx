@@ -25,8 +25,8 @@ export function AdminNav() {
                                 aria-current={active ? 'page' : undefined}
                                 className={`inline-block whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold ${
                                     active
-                                        ? 'border-primary text-primary'
-                                        : 'border-transparent text-muted hover:text-primary'
+                                        ? 'border-primary text-primary-text'
+                                        : 'border-transparent text-muted hover:text-primary-text'
                                 }`}
                             >
                                 {t.label}

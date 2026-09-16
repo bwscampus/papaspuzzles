@@ -1,5 +1,6 @@
 import { conflict, notFound, validationError } from '@/lib/api';
 import { iso, query, queryOne, withTransaction, type Queryable } from '@/lib/db';
+import { awardPuzzles, chargeTrade, refundTrade } from '@/lib/credits';
 import { getTraderStatus } from '@/lib/trader';
 import type { PuzzleInput, PuzzleStatus, TradeStatus, TradeSummary, TraderTier } from '@/lib/types';
 import { PUZZLE_COLUMNS, getPuzzlesByIds, toPublicPuzzle, type PuzzleRow } from './puzzles';
@@ -74,12 +75,14 @@ export interface SubmitTradeInput {
 
 export async function submitTrade(input: SubmitTradeInput): Promise<{ tradeId: string; tier: TraderTier }> {
     return withTransaction(async (client) => {
+        // One trade at a time per email so the balance check and the charge cannot race.
+        await client.query('select pg_advisory_xact_lock(hashtext(lower($1)))', [input.email]);
         const status = await getTraderStatus(input.email, client);
         if (input.givenPuzzles.length !== status.requiredGiven) {
             throw validationError(
-                status.returning
-                    ? 'You have already added a puzzle, so you trade one for one.'
-                    : 'Traders who have not added a puzzle yet give two puzzles for one.',
+                status.requiredGiven === 1
+                    ? 'You trade one puzzle for one.'
+                    : `With ${status.balance} credit${status.balance === -1 || status.balance === 1 ? '' : 's'}, you need to give ${status.requiredGiven} puzzles to take one.`,
                 'givenPuzzles'
             );
         }
@@ -114,6 +117,8 @@ export async function submitTrade(input: SubmitTradeInput): Promise<{ tradeId: s
         }
 
         await client.query(`update puzzles set status = 'reserved' where id = $1`, [input.wantedPuzzleId]);
+        // The credit for the puzzle being taken comes off now; it is refunded if the trade is cancelled.
+        await chargeTrade(client, tradeId, input.email);
 
         return { tradeId, tier };
     });
@@ -137,11 +142,15 @@ export async function completeTrade(id: string): Promise<TradeSummary> {
             id,
         ]);
         await client.query(`update puzzles set status = 'traded' where id = $1`, [trade.received_puzzle_id]);
-        // The admin has the given puzzles in hand at hand-off, so they count as added to the site.
-        await client.query(
+        // The admin has the given puzzles in hand at hand-off: approve them and credit the trader.
+        const { rows: approved } = await client.query<{ id: string }>(
             `update puzzles set status = 'available', reviewed_at = now()
-             where given_in_trade_id = $1 and status = 'pending_review'`,
+             where given_in_trade_id = $1 and status = 'pending_review' returning id`,
             [id]
+        );
+        await awardPuzzles(
+            client,
+            approved.map((r) => r.id)
         );
         const [summary] = await toSummaries(
             [{ ...trade, status: 'completed', completed_at: new Date() }],
@@ -165,6 +174,7 @@ export async function cancelTrade(id: string): Promise<TradeSummary> {
              where given_in_trade_id = $1 and status = 'pending_review'`,
             [id]
         );
+        await refundTrade(client, id, trade.trader_email);
         const [summary] = await toSummaries(
             [{ ...trade, status: 'cancelled', cancelled_at: new Date() }],
             client

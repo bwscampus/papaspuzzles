@@ -17,29 +17,29 @@ Papa's Puzzles works as a puzzle trading system which trades puzzlers' old puzzl
 | **Puzzle**                  | Has a name, piece count, theme, and a photo. Piece count is one of 100, 300, 500, 1000, 2000+. Theme is one of Animals, Landscape, Art, Food, Cityscape, Movies, Other. There is **no** condition and **no** easy / medium / hard category.                                                                           |
 | **Puzzle status**           | `pending review` (submitted, not yet public) → `available` (shown on Explore) → `reserved` (picked in a trade or with credits, hand-off not done yet) → `traded` (handed off in a trade) or `claimed` (handed off for credits). A puzzle can also be `rejected` by the admin. Explore shows only `available` puzzles. |
 | **Account**                 | Optional. Email + password. You need an account to use credits and to see My Trades. Everything is tied to your email, so anything you did as a guest shows up once you create an account with the same email.                                                                                                        |
-| **New vs returning trader** | **Returning** = at least one puzzle from this email has been added to the site (approved by the admin). **New** = none yet. The site keeps two counters per email: puzzles added and puzzles taken. Decided from the email, so it works before signing in.                                                            |
+| **New vs returning trader** | Decided by your credit balance. Everyone starts at −1. At −1 you are **new**: your first trade is two puzzles for one. At 0 or more you are **returning**: one for one. The site also keeps two counters per email: puzzles added and puzzles taken. Decided from the email, so it works before signing in.           |
 | **Credit**                  | One credit claims one available puzzle. Credits never expire.                                                                                                                                                                                                                                                         |
 
 ## 3. Rules
 
 ### Start a Trade
 
-1. New traders give **2** puzzles and pick **1**. Returning traders give **1** and pick **1**. The website enforces this.
+1. Your balance plus the puzzles you give must reach at least 1. At −1 (new) that means **2** puzzles for **1**; at 0 or more it is **1** for **1**. The website enforces this. The credit for the puzzle you take comes off when you submit the trade.
 2. The puzzle you pick is reserved for you immediately so nobody else can take it.
 3. The puzzles you give go into review and appear on Explore once the admin approves them.
 4. You choose a drop-off date and a time slot (10 AM, 12 PM, 2 PM, or 4 PM).
-5. After the hand-off, the admin marks the trade **completed**. The puzzles you gave are approved onto the site, so from now on you trade one for one. If the trade does not happen, the admin **cancels** it and the picked puzzle goes back on Explore.
+5. After the hand-off, the admin marks the trade **completed**: the puzzles you gave are approved and each adds a credit. If the trade does not happen, the admin **cancels** it, the picked puzzle goes back on Explore, and the credit is refunded.
 
 ### Donate Now
 
 1. Enter your name, email, and one or more puzzles ("Add Another Puzzle" as many times as you like).
 2. Puzzles go into review. When the admin **accepts** your donation, the puzzles appear on Explore and you earn credits.
-3. Credits: if you were a **new** trader when the donation was accepted, you earn (number of puzzles − 1). Otherwise you earn 1 credit per puzzle.
-4. After submitting you see: "Thanks! Once approved you'll have about N credits." (N is computed from your current status.)
+3. Credits: each puzzle adds one credit when the admin approves it (accepting the donation, or approving the puzzle individually). Because everyone starts at −1, a first donation of one puzzle brings you to 0.
+4. After submitting you see how the donation will move your balance once approved.
 
 ### Use Your Credits
 
-1. Sign in. You can pick as many available puzzles as you have credits.
+1. Sign in. With a balance above zero you can pick as many available puzzles as you have credits.
 2. The puzzles are reserved and the credits are deducted right away. The admin marks the pick-up **fulfilled** after hand-off, or **cancels** it and refunds the credits.
 
 ### Charity

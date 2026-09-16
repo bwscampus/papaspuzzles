@@ -1,4 +1,5 @@
 import { conflict, notFound, validationError } from '@/lib/api';
+import { awardPuzzles, revokePuzzle } from '@/lib/credits';
 import { PUZZLE_STATUSES } from '@/lib/constants';
 import { iso, query, queryOne, withTransaction, type Queryable } from '@/lib/db';
 import type { AdminPuzzle, Pieces, PublicPuzzle, PuzzleInput, PuzzleStatus, Theme } from '@/lib/types';
@@ -157,6 +158,11 @@ export async function adminUpdate(
             params,
             client
         );
+        // Approving credits the submitter; rejecting an approved puzzle takes the credit back.
+        if (patch.status === 'available' && current.status !== 'available') await awardPuzzles(client, [id]);
+        if (patch.status && patch.status !== 'available' && current.status === 'available') {
+            await revokePuzzle(client, id);
+        }
         return toAdminPuzzle(row as PuzzleRow);
     });
 }
