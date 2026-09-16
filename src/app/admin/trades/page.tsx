@@ -42,6 +42,8 @@ export default function AdminTradesPage() {
                     <ul className="flex flex-col gap-1">
                         {t.given.map((g) => (
                             <li key={g.id} className="flex items-center gap-2">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={g.imageUrl} alt="" className="h-10 w-10 rounded-lg object-cover" />
                                 <span>
                                     {g.name}{' '}
                                     <span className="text-xs text-muted">({pieceLabel(g.pieces)})</span>

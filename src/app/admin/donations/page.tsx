@@ -230,10 +230,15 @@ function Pickups() {
                 key: 'puzzles',
                 header: 'Puzzles',
                 render: (r) => (
-                    <ul>
+                    <ul className="flex flex-col gap-1">
                         {r.puzzles.map((p) => (
-                            <li key={p.id}>
-                                {p.name} <span className="text-xs text-muted">({pieceLabel(p.pieces)})</span>
+                            <li key={p.id} className="flex items-center gap-2">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={p.imageUrl} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                                <span>
+                                    {p.name}{' '}
+                                    <span className="text-xs text-muted">({pieceLabel(p.pieces)})</span>
+                                </span>
                             </li>
                         ))}
                     </ul>
