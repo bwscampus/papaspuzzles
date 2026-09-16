@@ -26,8 +26,9 @@ export const POST = handle('trades', async (request) => {
     const name = validateString(body.name, 'name', 'Name', MAX_NAME_LENGTH);
     const email = user ? user.email : validateEmail(body.email);
     const wantedPuzzleId = validateUuid(body.wantedPuzzleId, 'wantedPuzzleId', 'The puzzle you want');
-    // The service enforces the exact count (2 for new traders, 1 for returning).
-    const givenPuzzles = validatePuzzleInputs(body.givenPuzzles, 'givenPuzzles', { min: 1, max: 2 });
+    // The service enforces the exact count: max(1, 1 - balance), so 2 at the starting -1
+    // and more only while earlier trades are still pending. The cap here just bounds the payload.
+    const givenPuzzles = validatePuzzleInputs(body.givenPuzzles, 'givenPuzzles', { min: 1, max: 6 });
     const dropoffDate = validateDate(body.dropoffDate, 'dropoffDate', 'Drop-off date');
     if (dropoffDate < todayIso())
         throw validationError('Drop-off date must be today or later.', 'dropoffDate');
