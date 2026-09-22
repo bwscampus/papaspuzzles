@@ -18,6 +18,7 @@ export default function HomePage() {
                     playsInline
                     aria-hidden="true"
                 />
+                <div className="absolute inset-0 bg-black/60" aria-hidden="true" />
                 <div className="relative mx-auto flex min-h-[70vh] max-w-4xl flex-col items-center justify-center px-4 pb-32 pt-24 text-center sm:pb-40 sm:pt-32">
                     <p className="mb-4 text-sm font-medium uppercase tracking-[0.3em] text-white drop-shadow-md">
                         Welcome to
