@@ -20,8 +20,6 @@ import {
 
 interface Result {
     puzzleCount: number;
-    estimatedCredits: number;
-    returning: boolean;
 }
 
 export default function DonatePage() {
@@ -91,21 +89,13 @@ export default function DonatePage() {
             <PageShell title="Thank you!" width="narrow">
                 <Card>
                     <p className="text-lg">
-                        We received {result.puzzleCount} puzzle{result.puzzleCount === 1 ? '' : 's'}. Once
-                        approved, you&apos;ll have about{' '}
-                        <strong>
-                            {result.estimatedCredits} credit{result.estimatedCredits === 1 ? '' : 's'}
-                        </strong>
-                        {result.returning ? '' : ' (first donations earn one less than the puzzle count)'}.
+                        We received {result.puzzleCount} puzzle{result.puzzleCount === 1 ? '' : 's'}.
                     </p>
-                    <p className="mt-3 text-muted">
-                        We review every puzzle before it goes on Explore. Credits are added to your email as
-                        soon as we do.
-                    </p>
+                    <p className="mt-3 text-muted">We review every puzzle before it goes on Explore.</p>
                     {!user && (
-                        <Alert tone="info" className="mt-6" title="Keep your credits handy">
-                            Create an account with <strong>{email}</strong> to see your credits and spend
-                            them.
+                        <Alert tone="info" className="mt-6" title="Track your donations">
+                            Create an account with <strong>{email}</strong> to see your donations under My
+                            Trades.
                             <div className="mt-3">
                                 <Button size="sm" onClick={() => openAuthDialog('signup')}>
                                     Create an account
@@ -131,11 +121,7 @@ export default function DonatePage() {
     }
 
     return (
-        <PageShell
-            title="Donate Now"
-            subtitle="Give your finished puzzles a second life and earn credits toward new ones."
-            width="narrow"
-        >
+        <PageShell title="Donate Now" width="narrow">
             <form onSubmit={submit} noValidate className="flex flex-col gap-8">
                 <Card>
                     <h2 className="mb-4 text-xl">Your info</h2>
@@ -154,7 +140,9 @@ export default function DonatePage() {
                             onChange={(e) => setEmail(e.target.value)}
                             error={fieldErrors.email}
                             disabled={!!user}
-                            hint={user ? 'Using your account email.' : 'Credits are tied to this email.'}
+                            hint={
+                                user ? 'Using your account email.' : 'Your donations are tied to this email.'
+                            }
                             autoComplete="email"
                         />
                     </div>
@@ -167,11 +155,7 @@ export default function DonatePage() {
 
                 {formError && <Alert tone="error">{formError}</Alert>}
 
-                <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm text-muted">
-                        First donation: earn one credit less than the puzzle count. After that: one credit per
-                        puzzle.
-                    </p>
+                <div className="flex justify-end">
                     <Button type="submit" size="lg" loading={busy}>
                         Submit donation
                     </Button>

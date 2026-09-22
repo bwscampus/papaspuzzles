@@ -110,57 +110,12 @@ export default function AdminPuzzlesPage() {
                     return (
                         <div className="flex flex-wrap justify-end gap-1">
                             {p.status === 'pending_review' && (
-                                <Button
-                                    size="sm"
-                                    loading={busy}
-                                    onClick={() =>
-                                        run(
-                                            p.id,
-                                            () =>
-                                                api.patch(`/api/admin/puzzles/${p.id}`, {
-                                                    status: 'available',
-                                                }),
-                                            'Puzzle approved.'
-                                        )
-                                    }
+                                <a
+                                    href={p.source === 'trade' ? '/admin/trades' : '/admin/donations'}
+                                    className="self-center px-2 text-xs font-semibold text-primary-text hover:underline"
                                 >
-                                    Approve
-                                </Button>
-                            )}
-                            {(p.status === 'pending_review' || p.status === 'available') && (
-                                <ConfirmButton
-                                    label="Reject"
-                                    busy={busy}
-                                    onConfirm={() =>
-                                        run(
-                                            p.id,
-                                            () =>
-                                                api.patch(`/api/admin/puzzles/${p.id}`, {
-                                                    status: 'rejected',
-                                                }),
-                                            'Puzzle rejected.'
-                                        )
-                                    }
-                                />
-                            )}
-                            {p.status === 'rejected' && (
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    loading={busy}
-                                    onClick={() =>
-                                        run(
-                                            p.id,
-                                            () =>
-                                                api.patch(`/api/admin/puzzles/${p.id}`, {
-                                                    status: 'available',
-                                                }),
-                                            'Puzzle restored.'
-                                        )
-                                    }
-                                >
-                                    Restore
-                                </Button>
+                                    Review in {p.source === 'trade' ? 'Trades' : 'Donations'}
+                                </a>
                             )}
                             {!locked && (
                                 <>
@@ -213,7 +168,7 @@ export default function AdminPuzzlesPage() {
             {error ? (
                 <Alert tone="error">{error}</Alert>
             ) : data === null ? (
-                <div className="flex justify-center py-16 text-primary">
+                <div className="flex justify-center py-16 text-primary-text">
                     <Spinner className="h-8 w-8" />
                 </div>
             ) : (

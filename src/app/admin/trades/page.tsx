@@ -42,6 +42,8 @@ export default function AdminTradesPage() {
                     <ul className="flex flex-col gap-1">
                         {t.given.map((g) => (
                             <li key={g.id} className="flex items-center gap-2">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={g.imageUrl} alt="" className="h-10 w-10 rounded-lg object-cover" />
                                 <span>
                                     {g.name}{' '}
                                     <span className="text-xs text-muted">({pieceLabel(g.pieces)})</span>
@@ -92,21 +94,21 @@ export default function AdminTradesPage() {
                                     run(
                                         t.id,
                                         () => api.post(`/api/admin/trades/${t.id}`, { action: 'complete' }),
-                                        'Trade completed.'
+                                        'Trade accepted.'
                                     )
                                 }
                             >
-                                Complete
+                                Accept
                             </Button>
                             <ConfirmButton
-                                label="Cancel"
-                                confirmLabel="Cancel trade"
+                                label="Reject"
+                                confirmLabel="Reject trade"
                                 busy={busyId === t.id}
                                 onConfirm={() =>
                                     run(
                                         t.id,
                                         () => api.post(`/api/admin/trades/${t.id}`, { action: 'cancel' }),
-                                        'Trade cancelled; puzzle released.'
+                                        'Trade rejected; puzzle released and credit refunded.'
                                     )
                                 }
                             />
@@ -138,7 +140,7 @@ export default function AdminTradesPage() {
             {error ? (
                 <Alert tone="error">{error}</Alert>
             ) : data === null ? (
-                <div className="flex justify-center py-16 text-primary">
+                <div className="flex justify-center py-16 text-primary-text">
                     <Spinner className="h-8 w-8" />
                 </div>
             ) : (

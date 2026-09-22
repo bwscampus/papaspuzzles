@@ -34,7 +34,7 @@ function HistoryInner() {
     if (error) return <Alert tone="error">{error}</Alert>;
     if (!history) {
         return (
-            <div className="flex justify-center py-20 text-primary">
+            <div className="flex justify-center py-20 text-primary-text">
                 <Spinner className="h-8 w-8" />
             </div>
         );
@@ -45,7 +45,7 @@ function HistoryInner() {
         return (
             <EmptyState
                 title="Nothing here yet"
-                text="Trades, donations, and credit pick-ups under your email will show up here."
+                text="Trades and donations under your email will show up here."
                 action={<Button href="/explore">Explore puzzles</Button>}
             />
         );
@@ -56,20 +56,20 @@ function HistoryInner() {
             <Card className="flex flex-wrap items-center gap-8">
                 <div>
                     <p className="text-sm text-muted">Puzzles added</p>
-                    <p className="font-display text-3xl font-bold text-primary">
+                    <p className="font-display text-3xl font-bold text-primary-text">
                         {history.stats.puzzlesAdded}
                     </p>
                 </div>
                 <div>
                     <p className="text-sm text-muted">Puzzles taken</p>
-                    <p className="font-display text-3xl font-bold text-primary">
+                    <p className="font-display text-3xl font-bold text-primary-text">
                         {history.stats.puzzlesTaken}
                     </p>
                 </div>
-                <p className="text-sm text-muted">
-                    {history.stats.returning
+                <p className="max-w-sm text-sm text-muted">
+                    {history.stats.requiredGiven === 1
                         ? 'You trade one puzzle for one.'
-                        : 'Your first trade is two puzzles for one. After one approved puzzle, it is one for one.'}
+                        : `Your first trade is ${history.stats.requiredGiven} puzzles for one; after that you trade one for one.`}
                 </p>
             </Card>
             <section aria-labelledby="trades">
@@ -153,11 +153,7 @@ function HistoryInner() {
                                         <p className="font-semibold">
                                             {d.puzzleCount} puzzle{d.puzzleCount === 1 ? '' : 's'}
                                         </p>
-                                        <p className="text-sm text-muted">
-                                            {formatDate(d.createdAt)}
-                                            {d.creditsAwarded !== null &&
-                                                ` · ${d.creditsAwarded} credit${d.creditsAwarded === 1 ? '' : 's'} earned`}
-                                        </p>
+                                        <p className="text-sm text-muted">{formatDate(d.createdAt)}</p>
                                     </div>
                                     <StatusBadge status={d.status} />
                                 </Card>
@@ -167,13 +163,11 @@ function HistoryInner() {
                 )}
             </section>
 
-            <section aria-labelledby="pickups">
-                <h2 id="pickups" className="mb-4 text-2xl">
-                    Credit pick-ups
-                </h2>
-                {history.redemptions.length === 0 ? (
-                    <p className="text-muted">No credit pick-ups yet.</p>
-                ) : (
+            {history.redemptions.length > 0 && (
+                <section aria-labelledby="pickups">
+                    <h2 id="pickups" className="mb-4 text-2xl">
+                        Pick-ups
+                    </h2>
                     <ul className="flex flex-col gap-3">
                         {history.redemptions.map((r) => (
                             <li key={r.id}>
@@ -182,25 +176,22 @@ function HistoryInner() {
                                         <p className="font-semibold">
                                             {r.puzzles.map((p) => p.name).join(', ')}
                                         </p>
-                                        <p className="text-sm text-muted">
-                                            {formatDate(r.createdAt)} · {r.creditsSpent} credit
-                                            {r.creditsSpent === 1 ? '' : 's'}
-                                        </p>
+                                        <p className="text-sm text-muted">{formatDate(r.createdAt)}</p>
                                     </div>
                                     <StatusBadge status={r.status} />
                                 </Card>
                             </li>
                         ))}
                     </ul>
-                )}
-            </section>
+                </section>
+            )}
         </div>
     );
 }
 
 export default function MyTradesPage() {
     return (
-        <PageShell title="My Trades" subtitle="Everything you have given, received, and earned.">
+        <PageShell title="My Trades">
             <SignInGate
                 title="Sign in to see your trades"
                 text="Your history is tied to your email. Sign in or create an account with the email you used."

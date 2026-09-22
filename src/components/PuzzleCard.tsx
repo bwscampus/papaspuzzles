@@ -33,7 +33,7 @@ export function PuzzleCard({
                     {pieceLabel(puzzle.pieces)} pcs
                 </span>
                 {selectable && selected && (
-                    <span className="absolute left-3 top-3 rounded-full bg-primary px-2.5 py-1 text-xs font-bold text-white">
+                    <span className="absolute left-3 top-3 rounded-full bg-primary px-2.5 py-1 text-xs font-bold text-ink">
                         Selected
                     </span>
                 )}

@@ -1,8 +1,8 @@
-import { handle, ok, readJson } from '@/lib/api';
+import { handle, ok, readJson, validationError } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
-import { MAX_NAME_LENGTH, PIECES, PUZZLE_STATUSES, THEMES } from '@/lib/constants';
+import { MAX_NAME_LENGTH, PIECES, THEMES } from '@/lib/constants';
 import { adminDelete, adminUpdate } from '@/lib/services/puzzles';
-import type { Pieces, PuzzleInput, PuzzleStatus, Theme } from '@/lib/types';
+import type { Pieces, PuzzleInput, Theme } from '@/lib/types';
 import {
     validateCondition,
     validateEnum,
@@ -20,7 +20,10 @@ export const PATCH = handle<Ctx>('admin/puzzles/[id]', async (request, { params 
     const id = validateUuid((await params).id, 'id', 'Puzzle');
     const body = await readJson(request);
 
-    const patch: Partial<PuzzleInput> & { status?: PuzzleStatus } = {};
+    if (body.status !== undefined) {
+        throw validationError('Review puzzles from the Donations or Trades page.', 'status');
+    }
+    const patch: Partial<PuzzleInput> = {};
     if (body.name !== undefined)
         patch.name = validateString(body.name, 'name', 'Puzzle name', MAX_NAME_LENGTH);
     if (body.pieces !== undefined)
@@ -30,9 +33,6 @@ export const PATCH = handle<Ctx>('admin/puzzles/[id]', async (request, { params 
         patch.condition = validateCondition(body.condition, 'condition');
     }
     if (body.imageUrl !== undefined) patch.imageUrl = validateImageUrl(body.imageUrl, 'imageUrl');
-    if (body.status !== undefined) {
-        patch.status = validateEnum<PuzzleStatus>(body.status, PUZZLE_STATUSES, 'status', 'Status');
-    }
 
     return ok(await adminUpdate(id, patch));
 });

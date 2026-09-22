@@ -79,7 +79,7 @@ function TradeWizard() {
                 return [...keep, ...Array.from({ length: requiredGiven - keep.length }, () => emptyDraft())];
             }
             setCountNotice(
-                `You're a returning trader, so only ${requiredGiven} puzzle is needed. Remove the one you'd rather keep.`
+                `Only ${requiredGiven} puzzle${requiredGiven === 1 ? ' is' : 's are'} needed for this trade. Remove the one you'd rather keep.`
             );
             return current;
         });
@@ -218,7 +218,6 @@ function TradeWizard() {
     return (
         <PageShell
             title="Start a Trade"
-            subtitle="Three quick steps: tell us who you are, describe the puzzles you're giving, and pick your new one."
             width={step === 3 ? 'wide' : 'narrow'}
             actions={<Stepper steps={STEPS} current={step} />}
         >
@@ -258,8 +257,8 @@ function TradeWizard() {
             {step === 2 && (
                 <form onSubmit={goToPick} noValidate className="flex flex-col gap-6">
                     <Alert tone="info">
-                        {requiredGiven === 2
-                            ? 'You have not added a puzzle yet, so tell us about the two puzzles you are giving.'
+                        {requiredGiven !== null && requiredGiven > 1
+                            ? `Your balance is ${status?.balance ?? -1}, so tell us about the ${requiredGiven} puzzles you are giving.`
                             : 'Tell us about the puzzle you are giving.'}
                     </Alert>
                     {countNotice && (

@@ -55,6 +55,8 @@ interface CreditEntryRow {
     reason: CreditEntry['reason'];
     donation_batch_id: string | null;
     redemption_id: string | null;
+    puzzle_id: string | null;
+    trade_id: string | null;
     note: string | null;
     created_at: Date;
 }
@@ -67,12 +69,15 @@ function toEntry(r: CreditEntryRow): CreditEntry {
         reason: r.reason,
         donationBatchId: r.donation_batch_id,
         redemptionId: r.redemption_id,
+        puzzleId: r.puzzle_id,
+        tradeId: r.trade_id,
         note: r.note,
         createdAt: iso(r.created_at) as string,
     };
 }
 
-const ENTRY_COLUMNS = 'id, email, delta, reason, donation_batch_id, redemption_id, note, created_at';
+const ENTRY_COLUMNS =
+    'id, email, delta, reason, donation_batch_id, redemption_id, puzzle_id, trade_id, note, created_at';
 
 export async function listCreditEntries(email?: string): Promise<CreditEntry[]> {
     const rows = email

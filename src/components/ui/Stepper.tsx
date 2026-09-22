@@ -12,7 +12,7 @@ export function Stepper({ steps, current }: { steps: readonly string[]; current:
                     >
                         <span
                             className={`flex h-8 w-8 items-center justify-center rounded-full font-display text-sm font-bold ${
-                                state === 'todo' ? 'bg-rose-tint text-muted' : 'bg-primary text-white'
+                                state === 'todo' ? 'bg-rose-tint text-muted' : 'bg-primary text-ink'
                             }`}
                         >
                             {n}

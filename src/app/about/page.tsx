@@ -10,7 +10,6 @@ export default function AboutPage() {
         <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
             <header className="text-center">
                 <h1 className="text-4xl sm:text-5xl">About Us</h1>
-                <p className="mt-3 text-lg text-muted">{SITE.phrase}</p>
             </header>
 
             <section className="mt-14 rounded-2xl bg-white p-8 shadow-card sm:p-10" aria-labelledby="mission">
@@ -55,11 +54,13 @@ export default function AboutPage() {
                         className="rounded-2xl shadow-card"
                     />
                     <figcaption className="mt-4 rounded-2xl bg-white p-5 shadow-card">
-                        <p className="font-display text-lg font-bold text-primary">{SITE.founder.name}</p>
+                        <p className="font-display text-lg font-bold text-primary-text">
+                            {SITE.founder.name}
+                        </p>
                         <p className="text-sm text-muted">{SITE.founder.title}</p>
                         <a
                             href={`mailto:${SITE.contactEmail}`}
-                            className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+                            className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-text hover:underline"
                         >
                             <Mail className="h-4 w-4" aria-hidden="true" />
                             {SITE.contactEmail}
@@ -69,7 +70,7 @@ export default function AboutPage() {
             </section>
 
             <section className="mt-16 rounded-2xl bg-cream px-6 py-12 text-center">
-                <blockquote className="font-display text-2xl font-bold leading-snug text-primary">
+                <blockquote className="font-display text-2xl font-bold leading-snug text-primary-text">
                     “{SITE.quote}”
                 </blockquote>
             </section>
