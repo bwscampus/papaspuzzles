@@ -8,12 +8,10 @@ import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
-import { useAuth } from '@/context/AuthContext';
 import { api, errorMessage } from '@/lib/client/api';
 import type { PublicPuzzle } from '@/lib/types';
 
 export default function ExplorePage() {
-    const { user, balance } = useAuth();
     const [filters, setFilters] = useState<Filters>({ theme: '', pieces: '' });
     const [puzzles, setPuzzles] = useState<PublicPuzzle[] | null>(null);
     const [error, setError] = useState('');
@@ -38,11 +36,7 @@ export default function ExplorePage() {
     }, [filters, reloadKey]);
 
     return (
-        <PageShell
-            title="Explore"
-            subtitle="Every puzzle here is available right now. Pick one to start a trade, or use your credits."
-            width="wide"
-        >
+        <PageShell title="Explore" width="wide">
             <PuzzleFilters value={filters} onChange={setFilters} />
 
             <div className="mt-8">
@@ -72,7 +66,7 @@ export default function ExplorePage() {
                         text={
                             filters.theme || filters.pieces
                                 ? 'Try clearing a filter.'
-                                : 'Be the first to donate one and earn credits.'
+                                : 'Be the first to donate one.'
                         }
                         action={
                             filters.theme || filters.pieces ? (
@@ -98,25 +92,13 @@ export default function ExplorePage() {
                                     <PuzzleCard
                                         puzzle={p}
                                         action={
-                                            <div className="flex flex-col gap-2">
-                                                <Button
-                                                    href={`/trade?wanted=${p.id}`}
-                                                    size="sm"
-                                                    className="w-full"
-                                                >
-                                                    Start a Trade
-                                                </Button>
-                                                {user && (balance ?? 0) >= 1 && (
-                                                    <Button
-                                                        href={`/credits?pick=${p.id}`}
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        className="w-full"
-                                                    >
-                                                        Use credits
-                                                    </Button>
-                                                )}
-                                            </div>
+                                            <Button
+                                                href={`/trade?wanted=${p.id}`}
+                                                size="sm"
+                                                className="w-full"
+                                            >
+                                                Start a Trade
+                                            </Button>
                                         }
                                     />
                                 </li>

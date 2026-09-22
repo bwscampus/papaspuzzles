@@ -75,16 +75,14 @@ export function TraderStatusNotice({
         );
     }
 
-    const { balance, requiredGiven } = lookup.status;
+    const { requiredGiven } = lookup.status;
     return requiredGiven === 1 ? (
         <Alert tone="success" title="Welcome back!">
-            You have {balance} credit{balance === 1 ? '' : 's'}, so you trade one puzzle for one.
-            {balance >= 1 && ' You could also take a puzzle with a credit on the Use Your Credits page.'}
+            You trade one puzzle for one.
         </Alert>
     ) : (
         <Alert tone="info" title="First trade?">
-            Everyone starts at −1 credit, so your first trade is {requiredGiven} puzzles for one. Each puzzle
-            you give is worth a credit once approved; after that you trade one for one.
+            Your first trade is {requiredGiven} puzzles for one. After that you trade one for one.
         </Alert>
     );
 }

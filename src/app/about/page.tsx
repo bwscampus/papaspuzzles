@@ -10,7 +10,6 @@ export default function AboutPage() {
         <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
             <header className="text-center">
                 <h1 className="text-4xl sm:text-5xl">About Us</h1>
-                <p className="mt-3 text-lg text-muted">{SITE.phrase}</p>
             </header>
 
             <section className="mt-14 rounded-2xl bg-white p-8 shadow-card sm:p-10" aria-labelledby="mission">

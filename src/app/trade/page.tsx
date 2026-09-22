@@ -218,7 +218,6 @@ function TradeWizard() {
     return (
         <PageShell
             title="Start a Trade"
-            subtitle="Three quick steps: tell us who you are, describe the puzzles you're giving, and pick your new one."
             width={step === 3 ? 'wide' : 'narrow'}
             actions={<Stepper steps={STEPS} current={step} />}
         >

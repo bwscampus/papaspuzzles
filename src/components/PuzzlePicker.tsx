@@ -9,7 +9,7 @@ import { Alert } from './ui/Alert';
 import { EmptyState } from './ui/EmptyState';
 import { Spinner } from './ui/Spinner';
 
-/** Grid of available puzzles with selection. `max` caps multi-select (e.g. credit balance). */
+/** Grid of available puzzles with selection. `max` caps multi-select (e.g. a trade limit). */
 export function PuzzlePicker({
     selected,
     onChange,

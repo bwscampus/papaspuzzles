@@ -12,7 +12,6 @@ import { Button } from './ui/Button';
 const LINKS = [
     { href: '/explore', label: 'Explore' },
     { href: '/donate', label: 'Donate' },
-    { href: '/credits', label: 'Use Your Credits' },
     { href: '/my-trades', label: 'My Trades' },
     { href: '/about', label: 'About Us' },
 ];

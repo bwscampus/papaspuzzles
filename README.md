@@ -1,7 +1,7 @@
 # Papa's Puzzles
 
-Trade your puzzles for exciting new ones! A small marketplace where puzzlers trade in finished puzzles, donate
-puzzles for credits, and spend credits on new ones.
+Trade your puzzles for exciting new ones! A small marketplace where puzzlers trade in finished puzzles and
+donate the ones they have completed.
 
 - Product spec: [overview.md](overview.md)
 - Technical design: [docs/technical-design.md](docs/technical-design.md)
@@ -50,8 +50,8 @@ BASE=http://localhost:3000 ADMIN_EMAIL=founder@example.com scripts/smoke.sh
 ## How it works
 
 **Accounts are optional.** Guests trade or donate with a name and email. An account (email + password) is
-needed to spend credits and to see My Trades. Everything is keyed by lowercased email, so a guest's history and
-credits appear once they create an account with the same email.
+needed to see My Trades. Everything is keyed by lowercased email, so a guest's history appears once they create
+an account with the same email.
 
 **Credits and trader tier.** One ledger per email (`credit_entries`); `credit_balance(email)` is −1 plus the sum
 of entries, so everyone starts at −1. Each puzzle you submit is +1 once approved (donation accepted, trade
@@ -67,8 +67,8 @@ server). The picked puzzle is reserved immediately. The admin marks the trade co
 Puzzles tab only edits and deletes); each accepted puzzle adds one credit to the submitter's ledger, attached to the puzzle so it can never
 double-count.
 
-**Credits.** Signed-in members pick up to `balance` available puzzles. Puzzles are reserved and credits deducted
-atomically; the admin accepts the pick-up (→ claimed) or rejects it (→ available, credits refunded).
+**Credits are internal.** The ledger only sets the trade rule (first trade 2-for-1, then 1-for-1); members never
+see a balance or spend credits. The pick-up flow (`/api/redemptions`) still exists for admins but has no page.
 A donation batch's status follows its puzzles: pending while any is under review, then accepted or rejected.
 
 **Puzzle statuses:** `pending_review → available → reserved → traded | claimed`, plus `rejected`.
