@@ -35,7 +35,7 @@ Papa's Puzzles works as a puzzle trading system which trades puzzlers' old puzzl
 ### Service area
 
 1. Start a Trade and Donate Now both ask for a ZIP code. The website only accepts ZIP codes on the founder's service-area list, and checks this on the server as well as on the page.
-2. Until the founder supplies the list, any valid 5-digit ZIP code is accepted. The ZIP code is still required and saved with the trade or donation.
+2. The list currently holds one ZIP code: **90049**. The ZIP code is saved with the trade or donation.
 3. A visitor outside the area sees a friendly message with a waitlist form instead of an error. Joining twice with the same email keeps one entry with the latest ZIP code.
 4. Use Your Credits is not checked by ZIP code.
 

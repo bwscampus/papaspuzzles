@@ -66,11 +66,11 @@ export function isEmail(value: string): boolean {
 }
 
 /**
- * Founder-supplied service area. PASTE THE ZIP LIST HERE, as 5-digit strings
- * (strings keep leading zeros). While the list is empty the area is not
+ * Founder-supplied service area, as 5-digit strings (strings keep leading
+ * zeros). Add ZIP codes here to expand it. An empty list means the area is not
  * configured and every well-formed ZIP is accepted.
  */
-export const SERVICE_ZIPS: readonly string[] = [];
+export const SERVICE_ZIPS: readonly string[] = ['90049'];
 
 export const ZIP_RE = /^\d{5}(-\d{4})?$/;
 export const WAITLIST_SOURCES = ['trade', 'donate', 'page'] as const;

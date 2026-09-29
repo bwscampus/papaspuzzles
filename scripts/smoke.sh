@@ -7,10 +7,9 @@ set -u
 BASE=${BASE:-http://localhost:3000}
 ADMIN_EMAIL=${ADMIN_EMAIL:?set ADMIN_EMAIL to an address listed in ADMIN_EMAILS}
 RUN=$(date +%s)$RANDOM
-# A ZIP inside the service area. Set SMOKE_ZIP once SERVICE_ZIPS is filled in and 90012 is not on it.
-ZIP=${SMOKE_ZIP:-90012}
-# Optional: a ZIP outside the service area, to check the gate when SERVICE_ZIPS is set.
-OUT_ZIP=${SMOKE_OUT_ZIP:-}
+# A ZIP inside the service area (SERVICE_ZIPS in src/lib/constants.ts) and one outside it.
+ZIP=${SMOKE_ZIP:-90049}
+OUT_ZIP=${SMOKE_OUT_ZIP:-10001}
 TMP=$(mktemp -d)
 PASS=0; FAIL=0
 
