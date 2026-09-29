@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { Mail } from 'lucide-react';
-import { MISSION, SITE, STORY, VALUES } from '@/content/site';
+import { CHARITY, MISSION, SITE, STORY, VALUES } from '@/content/site';
 
 export const metadata: Metadata = { title: 'About Us' };
 
@@ -31,6 +31,23 @@ export default function AboutPage() {
                         </li>
                     ))}
                 </ul>
+            </section>
+
+            <section
+                id="charity"
+                className="mt-14 scroll-mt-24 rounded-2xl bg-white p-8 shadow-card sm:p-10"
+                aria-labelledby="charity-title"
+            >
+                <h2 id="charity-title" className="text-2xl">
+                    Our Charity Partner
+                </h2>
+                <h3 className="mt-4 text-xl">{CHARITY.name}</h3>
+                <p className="text-sm font-semibold text-muted">{CHARITY.tagline}</p>
+                <p className="mt-4 leading-relaxed text-ink">{CHARITY.intro}</p>
+                <figure className="mt-6 border-l-4 border-rose pl-5">
+                    <blockquote className="leading-relaxed text-ink">“{CHARITY.quote}”</blockquote>
+                    <figcaption className="mt-2 text-sm text-muted">{CHARITY.name}</figcaption>
+                </figure>
             </section>
 
             <section className="mt-14 grid items-start gap-10 md:grid-cols-5" aria-labelledby="story">

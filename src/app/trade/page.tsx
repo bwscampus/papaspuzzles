@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/PageShell';
 import { PuzzleFormList } from '@/components/PuzzleFormList';
 import { PuzzlePicker } from '@/components/PuzzlePicker';
+import { ServiceAreaNotice } from '@/components/ServiceAreaNotice';
 import { TraderStatusNotice, type TraderLookup } from '@/components/TraderStatusNotice';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
@@ -22,7 +23,15 @@ import {
     type DraftErrors,
     type PuzzleDraft,
 } from '@/lib/client/puzzleDraft';
-import { DROPOFF_SLOTS, dropoffSlotLabel, isEmail, normalizeEmail } from '@/lib/constants';
+import { SERVICE_AREA } from '@/content/site';
+import {
+    DROPOFF_SLOTS,
+    dropoffSlotLabel,
+    isEmail,
+    isServiceZip,
+    normalizeEmail,
+    normalizeZip,
+} from '@/lib/constants';
 import type { PublicPuzzle, TraderStatus } from '@/lib/types';
 
 const STEPS = ['Your info', 'Your puzzles', 'Pick & drop-off'] as const;
@@ -38,6 +47,8 @@ function TradeWizard() {
     const [step, setStep] = useState(1);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [zip, setZip] = useState('');
+    const [zipError, setZipError] = useState('');
     const [lookup, setLookup] = useState<TraderLookup>({ state: 'idle' });
     const [drafts, setDrafts] = useState<PuzzleDraft[]>([]);
     const [draftErrors, setDraftErrors] = useState<Record<string, DraftErrors>>({});
@@ -85,6 +96,10 @@ function TradeWizard() {
         });
     }, [requiredGiven]);
 
+    // Derived from the field, not from submit: Continue stays disabled until the status check returns.
+    const normalizedZip = normalizeZip(zip);
+    const outsideArea = normalizedZip !== null && !isServiceZip(normalizedZip);
+
     const pickedPuzzle = useMemo(() => available.find((p) => p.id === selected[0]), [available, selected]);
 
     const refreshStatus = useCallback(async () => {
@@ -102,8 +117,12 @@ function TradeWizard() {
     const goToPuzzles = (e: FormEvent) => {
         e.preventDefault();
         setError('');
+        setZipError('');
         if (!name.trim()) return setError('Please enter your name.');
         if (!isEmail(email)) return setError('Please enter a valid email address.');
+        if (normalizedZip === null) return setZipError('Please enter a 5-digit ZIP code.');
+        // The notice below the form explains and offers the waitlist.
+        if (outsideArea) return;
         if (lookup.state === 'loading') return setError('Still checking your trader status. One moment.');
         if (lookup.state === 'error')
             return setError('We could not check your trader status. Use "Try again" above.');
@@ -143,6 +162,7 @@ function TradeWizard() {
             const data = await api.post<{ tradeId: string; tier: string }>('/api/trades', {
                 name: name.trim(),
                 email: normalizeEmail(email),
+                zip: normalizedZip,
                 wantedPuzzleId: selected[0],
                 givenPuzzles: drafts.map(draftToInput),
                 dropoffDate,
@@ -152,6 +172,11 @@ function TradeWizard() {
             window.scrollTo({ top: 0 });
         } catch (err) {
             if (err instanceof ApiClientError) {
+                if (err.field === 'zip') {
+                    setZipError(err.message);
+                    setStep(1);
+                    return;
+                }
                 const mapped = applyServerFieldError(err.field, 'givenPuzzles', err.message, drafts);
                 if (mapped) {
                     setDraftErrors(mapped);
@@ -222,36 +247,54 @@ function TradeWizard() {
             actions={<Stepper steps={STEPS} current={step} />}
         >
             {step === 1 && (
-                <form onSubmit={goToPuzzles} noValidate className="flex flex-col gap-6">
-                    <Card className="flex flex-col gap-4">
-                        <Input
-                            label="Name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            autoComplete="name"
-                        />
-                        <Input
-                            label="Email"
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            disabled={!!user || authLoading}
-                            hint={
-                                user
-                                    ? 'Using your account email.'
-                                    : 'We use your email to tell new and returning traders apart.'
-                            }
-                            autoComplete="email"
-                        />
-                        <TraderStatusNotice email={email} onChange={setLookup} />
-                    </Card>
-                    {error && <Alert tone="error">{error}</Alert>}
-                    <div className="flex justify-end">
-                        <Button type="submit" size="lg" disabled={authLoading || !status}>
-                            Continue
-                        </Button>
-                    </div>
-                </form>
+                <>
+                    <form onSubmit={goToPuzzles} noValidate className="flex flex-col gap-6">
+                        <Card className="flex flex-col gap-4">
+                            <Input
+                                label="Name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                autoComplete="name"
+                            />
+                            <Input
+                                label="Email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={!!user || authLoading}
+                                hint={
+                                    user
+                                        ? 'Using your account email.'
+                                        : 'We use your email to tell new and returning traders apart.'
+                                }
+                                autoComplete="email"
+                            />
+                            <Input
+                                label="ZIP code"
+                                value={zip}
+                                onChange={(e) => {
+                                    setZip(e.target.value);
+                                    setZipError('');
+                                }}
+                                error={zipError}
+                                hint={SERVICE_AREA.zipHint}
+                                inputMode="numeric"
+                                autoComplete="postal-code"
+                                maxLength={10}
+                            />
+                            <TraderStatusNotice email={email} onChange={setLookup} />
+                        </Card>
+                        {error && <Alert tone="error">{error}</Alert>}
+                        <div className="flex justify-end">
+                            <Button type="submit" size="lg" disabled={authLoading || !status || outsideArea}>
+                                Continue
+                            </Button>
+                        </div>
+                    </form>
+                    {outsideArea && normalizedZip && (
+                        <ServiceAreaNotice source="trade" email={email} zip={normalizedZip} />
+                    )}
+                </>
             )}
 
             {step === 2 && (

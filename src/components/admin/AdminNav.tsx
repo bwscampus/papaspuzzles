@@ -9,6 +9,7 @@ const TABS = [
     { href: '/admin/trades', label: 'Trades' },
     { href: '/admin/donations', label: 'Donations & Credits' },
     { href: '/admin/users', label: 'Users' },
+    { href: '/admin/waitlist', label: 'Waitlist' },
 ];
 
 export function AdminNav() {

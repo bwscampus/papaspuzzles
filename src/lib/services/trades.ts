@@ -67,6 +67,7 @@ async function toSummaries(rows: TradeRow[], client?: Queryable): Promise<TradeS
 export interface SubmitTradeInput {
     name: string;
     email: string;
+    zip: string;
     wantedPuzzleId: string;
     givenPuzzles: PuzzleInput[];
     dropoffDate: string;
@@ -99,9 +100,17 @@ export async function submitTrade(input: SubmitTradeInput): Promise<{ tradeId: s
 
         const tier: TraderTier = status.returning ? 'returning' : 'new';
         const trade = await queryOne<{ id: string }>(
-            `insert into trades (trader_name, trader_email, tier, received_puzzle_id, dropoff_date, dropoff_slot)
-             values ($1, $2, $3, $4, $5, $6) returning id`,
-            [input.name, input.email, tier, input.wantedPuzzleId, input.dropoffDate, input.dropoffSlot],
+            `insert into trades (trader_name, trader_email, tier, received_puzzle_id, dropoff_date, dropoff_slot, zip)
+             values ($1, $2, $3, $4, $5, $6, $7) returning id`,
+            [
+                input.name,
+                input.email,
+                tier,
+                input.wantedPuzzleId,
+                input.dropoffDate,
+                input.dropoffSlot,
+                input.zip,
+            ],
             client
         );
         const tradeId = (trade as { id: string }).id;

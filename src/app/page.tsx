@@ -1,6 +1,7 @@
-import { Gift, Search, Repeat } from 'lucide-react';
+import Link from 'next/link';
+import { Gift, MapPin, Search, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { SITE, STEPS } from '@/content/site';
+import { CHARITY, SERVICE_AREA, SITE, STEPS } from '@/content/site';
 
 const STEP_ICONS = [Gift, Search, Repeat];
 
@@ -19,7 +20,7 @@ export default function HomePage() {
                     aria-hidden="true"
                 />
                 <div className="absolute inset-0 bg-black/60" aria-hidden="true" />
-                <div className="relative mx-auto flex min-h-[70vh] max-w-4xl flex-col items-center justify-center px-4 pb-32 pt-24 text-center sm:pb-40 sm:pt-32">
+                <div className="relative mx-auto flex min-h-[70vh] max-w-4xl flex-col items-center justify-center px-4 pb-32 pt-16 text-center sm:pb-40 sm:pt-32">
                     <p className="mb-4 text-sm font-medium uppercase tracking-[0.3em] text-white drop-shadow-md">
                         Welcome to
                     </p>
@@ -28,7 +29,12 @@ export default function HomePage() {
                         <br />
                         Puzzles
                     </h1>
-                    <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+                    <p className="mt-6 inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
+                        <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        {SERVICE_AREA.badge}
+                    </p>
+                    <p className="mt-3 max-w-md text-sm text-white drop-shadow-md">{SERVICE_AREA.reason}</p>
+                    <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                         <Button href="/trade" size="lg">
                             Start a Trade
                         </Button>
@@ -36,6 +42,12 @@ export default function HomePage() {
                             Donate Now
                         </Button>
                     </div>
+                    <Link
+                        href="/waitlist"
+                        className="mt-4 text-sm font-semibold text-white underline underline-offset-4 drop-shadow-md hover:no-underline"
+                    >
+                        {SERVICE_AREA.waitlistCta}
+                    </Link>
                 </div>
                 <div className="pointer-events-none absolute inset-x-0 bottom-0" aria-hidden="true">
                     <svg
@@ -70,6 +82,24 @@ export default function HomePage() {
                         );
                     })}
                 </ol>
+            </section>
+
+            <section
+                className="mx-auto max-w-3xl px-4 pb-16 sm:px-6 lg:px-8"
+                aria-labelledby="charity-partner"
+            >
+                <div className="rounded-2xl bg-white p-8 text-center shadow-card sm:p-10">
+                    <h2 id="charity-partner" className="text-2xl">
+                        {CHARITY.homeTitle}
+                    </h2>
+                    <p className="mt-3 font-display text-xl font-bold text-primary-text">{CHARITY.name}</p>
+                    <p className="mt-2 text-muted">{CHARITY.intro}</p>
+                    <div className="mt-6">
+                        <Button href="/about#charity" variant="outline">
+                            Learn more
+                        </Button>
+                    </div>
+                </div>
             </section>
 
             <section className="bg-cream">

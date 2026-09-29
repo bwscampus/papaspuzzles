@@ -18,9 +18,15 @@ export function Footer() {
                 <p>
                     © {new Date().getFullYear()} {SITE.name}. {SITE.phrase}
                 </p>
-                <div className="flex items-center gap-5">
+                <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
                     <Link href="/about" className="hover:text-primary-text">
                         About Us
+                    </Link>
+                    <Link href="/faq" className="hover:text-primary-text">
+                        FAQ
+                    </Link>
+                    <Link href="/waitlist" className="hover:text-primary-text">
+                        Waitlist
                     </Link>
                     <a href={`mailto:${SITE.contactEmail}`} className="hover:text-primary-text">
                         {SITE.contactEmail}

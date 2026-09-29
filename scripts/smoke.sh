@@ -7,6 +7,10 @@ set -u
 BASE=${BASE:-http://localhost:3000}
 ADMIN_EMAIL=${ADMIN_EMAIL:?set ADMIN_EMAIL to an address listed in ADMIN_EMAILS}
 RUN=$(date +%s)$RANDOM
+# A ZIP inside the service area. Set SMOKE_ZIP once SERVICE_ZIPS is filled in and 90012 is not on it.
+ZIP=${SMOKE_ZIP:-90012}
+# Optional: a ZIP outside the service area, to check the gate when SERVICE_ZIPS is set.
+OUT_ZIP=${SMOKE_OUT_ZIP:-}
 TMP=$(mktemp -d)
 PASS=0; FAIL=0
 
@@ -72,12 +76,12 @@ check "traversal 404" 404 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/uploa
 P() { echo "{\"name\":\"$1\",\"pieces\":$2,\"theme\":\"$3\",\"imageUrl\":\"$IMG\"}"; }
 
 echo "== donations and credits"
-call POST /api/donations "" "{\"name\":\"Guest Person\",\"email\":\"$GUEST\",\"puzzles\":[$(P "Smoke A $RUN" 500 Animals),$(P "Smoke B $RUN" 1000 Art)]}"
+call POST /api/donations "" "{\"name\":\"Guest Person\",\"zip\":\"$ZIP\",\"email\":\"$GUEST\",\"puzzles\":[$(P "Smoke A $RUN" 500 Animals),$(P "Smoke B $RUN" 1000 Art)]}"
 check "guest donation 201" 201 "$STATUS"
 check "new donor starts at -1" -1 "$(field data.balance)"
 check "estimate = one credit per puzzle" 2 "$(field data.estimatedCredits)"
 check "estimated balance after approval" 1 "$(field data.estimatedBalance)"
-call POST /api/donations "" "{\"name\":\"X\",\"email\":\"$GUEST\",\"puzzles\":[{\"name\":\"Bad\",\"pieces\":750,\"theme\":\"Art\",\"condition\":\"good\",\"imageUrl\":\"$IMG\"}]}"
+call POST /api/donations "" "{\"name\":\"X\",\"zip\":\"$ZIP\",\"email\":\"$GUEST\",\"puzzles\":[{\"name\":\"Bad\",\"pieces\":750,\"theme\":\"Art\",\"condition\":\"good\",\"imageUrl\":\"$IMG\"}]}"
 check "invalid pieces 400" 400 "$STATUS"
 check "field path reported" "puzzles.0.pieces" "$(field error.field)"
 call GET /api/puzzles ""
@@ -94,7 +98,7 @@ call GET /api/puzzles ""
 check "public list has no emails" "" "$(echo "$BODY" | grep -o 'example.com' | head -1)"
 call GET "/api/trader-status?email=$GUEST" ""
 check "donor is now returning" "true" "$(field data.returning)"
-call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"puzzles\":[$(P "Smoke C $RUN" 300 Food)]}"
+call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"zip\":\"$ZIP\",\"puzzles\":[$(P "Smoke C $RUN" 300 Food)]}"
 check "returning donor estimate = count" 1 "$(field data.estimatedCredits)"
 BATCH2=$(field data.batchId)
 call POST "/api/admin/donation-batches/$BATCH2" "$A" '{"action":"accept"}'
@@ -107,7 +111,7 @@ call GET /api/puzzles ""
 WANT=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).data.find(p=>p.name==="Smoke A "+process.argv[1]).id))' "$RUN")
 call GET "/api/trader-status?email=$TRADER" ""
 check "fresh trader is new (needs 2)" 2 "$(field data.requiredGiven)"
-TRADE_BASE="\"name\":\"Trader\",\"email\":\"$TRADER\",\"wantedPuzzleId\":\"$WANT\",\"dropoffDate\":\"2099-01-05\",\"dropoffSlot\":\"14:00\""
+TRADE_BASE="\"name\":\"Trader\",\"zip\":\"$ZIP\",\"email\":\"$TRADER\",\"wantedPuzzleId\":\"$WANT\",\"dropoffDate\":\"2099-01-05\",\"dropoffSlot\":\"14:00\""
 call POST /api/trades "" "{$TRADE_BASE,\"givenPuzzles\":[$(P 'Given 1' 500 Movies)]}"
 check "new trader with 1 puzzle 400" 400 "$STATUS"
 call POST /api/trades "" "{$TRADE_BASE,\"givenPuzzles\":[$(P 'Given 1' 500 Movies),$(P 'Given 2' 500 Cityscape)]}"
@@ -130,11 +134,11 @@ check "trader now returning (needs 1)" 1 "$(field data.requiredGiven)"
 check "balance 0 after completion (+2 approved, -1 taken)" 0 "$(field data.balance)"
 check "given puzzles approved on completion" 2 "$(curl -s -b "$A" "$BASE/api/admin/trades?status=completed" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s).data.find(t=>t.id===process.argv[1]);console.log(t?t.given.filter(g=>g.status==="available").length:"")})' "$TRADE")"
 check "puzzlesAdded counted" 2 "$(field data.puzzlesAdded)"
-call POST /api/trades "" "{\"name\":\"Trader\",\"email\":\"$TRADER\",\"wantedPuzzleId\":\"$WANT\",\"dropoffDate\":\"2099-01-05\",\"dropoffSlot\":\"10:00\",\"givenPuzzles\":[$(P G 500 Movies),$(P G 500 Movies)]}"
+call POST /api/trades "" "{\"name\":\"Trader\",\"zip\":\"$ZIP\",\"email\":\"$TRADER\",\"wantedPuzzleId\":\"$WANT\",\"dropoffDate\":\"2099-01-05\",\"dropoffSlot\":\"10:00\",\"givenPuzzles\":[$(P G 500 Movies),$(P G 500 Movies)]}"
 check "returning trader with 2 puzzles 400" 400 "$STATUS"
 call GET /api/puzzles ""
 WANT2=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).data.find(p=>p.name==="Smoke B "+process.argv[1]).id))' "$RUN")
-call POST /api/trades "" "{\"name\":\"Trader\",\"email\":\"$TRADER\",\"wantedPuzzleId\":\"$WANT2\",\"dropoffDate\":\"2099-01-05\",\"dropoffSlot\":\"10:00\",\"givenPuzzles\":[$(P 'Given 3' 300 Other)]}"
+call POST /api/trades "" "{\"name\":\"Trader\",\"zip\":\"$ZIP\",\"email\":\"$TRADER\",\"wantedPuzzleId\":\"$WANT2\",\"dropoffDate\":\"2099-01-05\",\"dropoffSlot\":\"10:00\",\"givenPuzzles\":[$(P 'Given 3' 300 Other)]}"
 check "returning trader 1-for-1 201" 201 "$STATUS"
 TRADE2=$(field data.tradeId)
 call POST "/api/admin/trades/$TRADE2" "$A" '{"action":"cancel"}'
@@ -194,7 +198,7 @@ echo "== per-puzzle credits and admin adjustment"
 call POST /api/admin/credit-entries "$A" "{\"email\":\"$GUEST\",\"delta\":1,\"note\":\"smoke\"}"
 check "admin adjustment 201" 201 "$STATUS"
 check "adjusted balance = 2" 2 "$(field data.balance)"
-call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"puzzles\":[$(P "Smoke D $RUN" 100 Other),$(P "Smoke E $RUN" 300 Art)]}"
+call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"zip\":\"$ZIP\",\"puzzles\":[$(P "Smoke D $RUN" 100 Other),$(P "Smoke E $RUN" 300 Art)]}"
 BATCH3=$(field data.batchId)
 batch() { curl -s -b "$A" "$BASE/api/admin/donation-batches" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const b=JSON.parse(s).data.find(b=>b.id===process.argv[1]);const k=process.argv[2];console.log(!b?"":k==="puzzle0"?b.puzzles[0].id:k==="puzzle1"?b.puzzles[1].id:k==="p0status"?b.puzzles[0].status:k==="p1status"?b.puzzles[1].status:String(b[k]))})' "$BATCH3" "$1"; }
 PZ=$(batch puzzle0); PZ2=$(batch puzzle1)
@@ -229,19 +233,51 @@ call GET "/api/admin/trades?status=completed" "$A"
 GIVEN=$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s).data.find(t=>t.id===process.argv[1]);console.log(t?t.given[0].id:"")})' "$TRADE")
 call POST "/api/admin/puzzles/$GIVEN/review" "$A" '{"action":"reject"}'
 check "trade puzzles are reviewed through the trade 409" 409 "$STATUS"
-call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"puzzles\":[$(P "Smoke F $RUN" 100 Other),$(P "Smoke G $RUN" 300 Art)]}"
+call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"zip\":\"$ZIP\",\"puzzles\":[$(P "Smoke F $RUN" 100 Other),$(P "Smoke G $RUN" 300 Art)]}"
 BATCH4=$(field data.batchId)
 call POST "/api/admin/donation-batches/$BATCH4" "$A" '{"action":"accept"}'
 check "accept all 200" 200 "$STATUS"
 check "accept all publishes both" 2 "$(field data.puzzlesPublished)"
 call GET /api/me/credits "$U"
 check "accept all credits +2 (6)" 6 "$(field data.balance)"
-call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"puzzles\":[$(P "Smoke H $RUN" 100 Other)]}"
+call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"zip\":\"$ZIP\",\"puzzles\":[$(P "Smoke H $RUN" 100 Other)]}"
 BATCH5=$(field data.batchId)
 PZ5=$(curl -s -b "$A" "$BASE/api/admin/donation-batches?status=pending_review" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const b=JSON.parse(s).data.find(b=>b.id===process.argv[1]);console.log(b?b.puzzles[0].id:"")})' "$BATCH5")
 call DELETE "/api/admin/puzzles/$PZ5" "$A"
 check "delete pending puzzle 200" 200 "$STATUS"
 check "batch with no puzzles left is not pending" "rejected" "$(curl -s -b "$A" "$BASE/api/admin/donation-batches" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const b=JSON.parse(s).data.find(b=>b.id===process.argv[1]);console.log(b?b.status:"")})' "$BATCH5")"
+
+echo "== service area"
+call POST /api/donations "" "{\"name\":\"No Zip\",\"email\":\"$GUEST\",\"puzzles\":[$(P "Smoke Z $RUN" 100 Other)]}"
+check "donation without zip 400" 400 "$STATUS"
+check "zip field reported" "zip" "$(field error.field)"
+call POST /api/trades "" "{\"name\":\"Trader\",\"zip\":\"9001\",\"email\":\"$TRADER\",\"wantedPuzzleId\":\"$WANT2\",\"dropoffDate\":\"2099-01-05\",\"dropoffSlot\":\"10:00\",\"givenPuzzles\":[$(P 'Given Z' 300 Other)]}"
+check "trade with malformed zip 400" 400 "$STATUS"
+check "zip field reported" "zip" "$(field error.field)"
+if [ -n "$OUT_ZIP" ]; then
+    call POST /api/donations "" "{\"name\":\"Far Away\",\"zip\":\"$OUT_ZIP\",\"email\":\"$GUEST\",\"puzzles\":[$(P "Smoke Y $RUN" 100 Other)]}"
+    check "donation outside the area 400" 400 "$STATUS"
+    check "zip field reported" "zip" "$(field error.field)"
+fi
+
+echo "== waitlist"
+WAIT="waitlist-$RUN@example.com"
+call POST /api/waitlist "" "{\"email\":\"$WAIT\",\"zip\":\"10001\",\"source\":\"trade\"}"
+check "join waitlist 201" 201 "$STATUS"
+call POST /api/waitlist "" "{\"email\":\"$WAIT\",\"zip\":\"10002-1234\"}"
+check "join again 201" 201 "$STATUS"
+call POST /api/waitlist "" "{\"email\":\"$WAIT\",\"zip\":\"1000\"}"
+check "bad zip 400" 400 "$STATUS"
+check "zip field reported" "zip" "$(field error.field)"
+call POST /api/waitlist "" "{\"email\":\"nope\",\"zip\":\"10001\"}"
+check "bad email 400" 400 "$STATUS"
+call GET /api/admin/waitlist ""
+check "waitlist without session 401" 401 "$STATUS"
+call GET /api/admin/waitlist "$U"
+check "waitlist as user 403" 403 "$STATUS"
+call GET /api/admin/waitlist "$A"
+check "waitlist as admin 200" 200 "$STATUS"
+check "one row per email, latest zip kept" "1:10002" "$(echo "$BODY" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s).data.filter(w=>w.email===process.argv[1]);console.log(r.length+":"+(r[0]?r[0].zip:""))})' "$WAIT")"
 
 echo
 echo "passed: $PASS  failed: $FAIL"

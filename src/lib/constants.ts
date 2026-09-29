@@ -65,6 +65,28 @@ export function isEmail(value: string): boolean {
     return EMAIL_RE.test(value.trim());
 }
 
+/**
+ * Founder-supplied service area. PASTE THE ZIP LIST HERE, as 5-digit strings
+ * (strings keep leading zeros). While the list is empty the area is not
+ * configured and every well-formed ZIP is accepted.
+ */
+export const SERVICE_ZIPS: readonly string[] = [];
+
+export const ZIP_RE = /^\d{5}(-\d{4})?$/;
+export const WAITLIST_SOURCES = ['trade', 'donate', 'page'] as const;
+
+/** Returns the 5-digit ZIP from "12345" or "12345-6789", or null when malformed. */
+export function normalizeZip(value: string): string | null {
+    const trimmed = value.trim();
+    return ZIP_RE.test(trimmed) ? trimmed.slice(0, 5) : null;
+}
+
+export function isServiceZip(zip: string, list: readonly string[] = SERVICE_ZIPS): boolean {
+    const normalized = normalizeZip(zip);
+    if (normalized === null) return false;
+    return list.length === 0 || list.includes(normalized);
+}
+
 export function pieceLabel(pieces: number): string {
     return pieces >= 2000 ? '2000+' : String(pieces);
 }
