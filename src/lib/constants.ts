@@ -70,7 +70,22 @@ export function isEmail(value: string): boolean {
  * zeros). Add ZIP codes here to expand it. An empty list means the area is not
  * configured and every well-formed ZIP is accepted.
  */
-export const SERVICE_ZIPS: readonly string[] = ['90049'];
+export const SERVICE_ZIPS: readonly string[] = [
+    // Brentwood
+    '90049',
+    // Beverly Hills
+    '90209',
+    '90210',
+    '90211',
+    '90212',
+    '90213',
+    // Santa Monica
+    '90401',
+    '90402',
+    '90403',
+    '90404',
+    '90405',
+];
 
 export const ZIP_RE = /^\d{5}(-\d{4})?$/;
 export const WAITLIST_SOURCES = ['trade', 'donate', 'page'] as const;
