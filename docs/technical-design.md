@@ -18,8 +18,8 @@ Papa's Puzzles is a puzzle-trading service run by a student founder in Los Angel
 
 **Non-goals (explicitly out of scope for this release)**
 
-- Multiple branches/regions (SF, other schools). Data model does not carry a branch column yet; adding one later is additive.
-- Charity tracking. New traders still give two puzzles; which one goes to charity is handled offline.
+- Multiple branches/regions (SF, other schools). Data model does not carry a branch column yet; adding one later is additive. The service is Los Angeles only (ZIP gate, §3.2); a waitlist records interest from elsewhere.
+- Charity tracking. New traders still give two puzzles; which one goes to charity is handled offline. The site names the partner, Los Angeles Jewish Health, as content only.
 - Automated "is this a puzzle" photo classification. Admin review is the check.
 - Puzzle requests (the current "Request a puzzle" feature is removed).
 - Payments, shipping, notifications beyond password-reset email.
@@ -42,6 +42,7 @@ The founder's original text (mission, values, story, phrase, quote, contact) is 
 
 - **Start a Trade**: new traders give 2 puzzles and pick 1; returning traders give 1 and pick 1. Enforced server-side from the tier at submit time. The picked puzzle is `reserved` immediately. Given puzzles enter `pending_review`. The trader chooses a drop-off date and one of four time slots (10 AM, 12 PM, 2 PM, 4 PM). Admin marks the trade **completed** after hand-off (picked puzzle → `traded`; trader is now returning) or **cancelled** (picked puzzle → `available`; given puzzles still pending → `rejected`).
 - **Donate Now**: one or more puzzles with name + email. Puzzles enter `pending_review`. When admin **accepts** the batch, puzzles → `available` and credits are awarded: if the donor was **new** at acceptance time, credits = count − 1; otherwise credits = count. The confirmation screen shows the server's estimate as "once approved, you'll have about N credits". Admin may **reject** a batch (puzzles → `rejected`, no credits).
+- **Service area** (added 2026-09-29): Start a Trade and Donate Now require a ZIP code. `SERVICE_ZIPS` in `src/lib/constants.ts` is the founder's list, currently `90049` only (set 2026-09-29); an empty list would mean the area is not configured and any well-formed ZIP passes. The check runs on the page and again in `POST /api/trades` and `POST /api/donations`. A ZIP outside the area shows a notice with the waitlist form. Credit pick-ups are not gated.
 - **Use Your Credits**: signed in only. Pick up to `balance` available puzzles. Atomically: puzzles → `reserved`, balance − n, a pickup record created. Admin marks the pickup **fulfilled** (puzzles → `claimed`) or **cancelled** (puzzles → `available`, credits refunded).
 - **Explore**: `available` puzzles with filters Pieces and Theme. Card: photo, pieces badge, name, theme, condition, "Start a Trade".
 - **My Trades**: signed in only. Trades (gave → received, drop-off, status), donations (count, status, credits), credit pickups.
@@ -49,7 +50,7 @@ The founder's original text (mission, values, story, phrase, quote, contact) is 
 
 ### 3.3 Pages
 
-Home · Explore · Start a Trade (3 steps: Info → Your puzzles → Pick a puzzle + drop-off) · Donate Now · Use Your Credits · My Trades · About Us · Sign in / Sign up / Reset password (dialog + page) · Admin.
+Home · Explore · Start a Trade (3 steps: Info → Your puzzles → Pick a puzzle + drop-off) · Donate Now · Use Your Credits · My Trades · About Us · FAQ · Waitlist · Sign in / Sign up / Reset password (dialog + page) · Admin.
 
 ### 3.4 Content
 
@@ -99,14 +100,16 @@ src/
   app/                      pages + API routes (see §8, §9)
   components/ui/            Button, Input, Select, Card, Modal, Badge, Alert, Spinner, EmptyState, Stepper
   components/               PageShell, Navbar, Footer, AuthDialog, Toast, PuzzleCard, PuzzleFilters,
-                            PhotoUpload, PuzzleForm, PuzzleFormList, PuzzlePicker, TraderStatusNotice
+                            PhotoUpload, PuzzleForm, PuzzleFormList, PuzzlePicker, TraderStatusNotice,
+                            WaitlistForm, ServiceAreaNotice
   components/admin/         AdminNav, DataTable, StatusBadge, ConfirmButton
   context/                  AuthContext (user, isAdmin, openAuthDialog), ToastContext
-  content/site.ts           all spec copy (phrase, quote, mission, values, story, founder)
+  content/site.ts           all spec copy (phrase, quote, mission, values, story, founder,
+                            service area, charity partner, FAQ)
   lib/                      db, session, storage, email, validate (kept); api, auth, constants, types,
-                            trader, credits (new); services/{puzzles,donations,trades,redemptions,users}
+                            trader, credits (new); services/{puzzles,donations,trades,redemptions,users,waitlist}
   lib/client/api.ts         typed browser fetch wrapper
-db/migrations/0001_schema.sql
+db/migrations/0001_schema.sql … 0006_waitlist_and_zip.sql (0004 was reverted; never reuse it)
 scripts/migrate.mjs
 ```
 
@@ -126,6 +129,8 @@ Single fresh migration `db/migrations/0001_schema.sql` replacing `0001_init.sql`
 | `redemptions`           | `user_id → users`, `email`, `credits_spent int > 0`, `status` ∈ pending_pickup/fulfilled/cancelled, `fulfilled_at`, `cancelled_at`                                                                                                                                                                                                                                                   |                                                                                                                                                                                                     |
 | `redemption_puzzles`    | `redemption_id`, `puzzle_id`; pk (both); unique `puzzle_id`                                                                                                                                                                                                                                                                                                                          |                                                                                                                                                                                                     |
 | `credit_entries`        | `email`, `delta int ≠ 0`, `reason` ∈ donation_accepted/redemption/redemption_cancelled/admin_adjustment, `donation_batch_id`, `redemption_id`, `note`                                                                                                                                                                                                                                | Ledger keyed by email so guests accrue credits before they have an account. Unique partial index on `donation_batch_id` where reason = donation_accepted (idempotent awards). Index `lower(email)`. |
+
+Added by `0006_waitlist_and_zip.sql`: table `waitlist` (`email`, `zip` 5 digits, `source` ∈ trade/donate/page, `updated_at`; unique index on `lower(email)`, index on `zip`), and a nullable `zip` column (5 digits) on `trades` and `donation_batches`. Rows from before the ZIP check have no ZIP.
 
 **SQL helpers** (read-only, `stable`):
 
@@ -152,9 +157,10 @@ All functions in `src/lib/services/*.ts`; mutations run inside `withTransaction`
 | `redeemPuzzles(user, puzzleIds)`                                                | `pg_advisory_xact_lock(hashtext(lower(email)))`; dedupe ids; balance = `credit_balance`; 400 if balance < n; lock puzzles, 409 unless all available; insert redemption + join rows; puzzles → reserved; ledger −n                                                                                                                                     |
 | `fulfillRedemption(id)` / `cancelRedemption(id)`                                | → fulfilled, puzzles → claimed / → cancelled, puzzles → available, ledger +n                                                                                                                                                                                                                                                                          |
 | `puzzles.adminUpdate/adminDelete`                                               | status transitions allowed only among pending_review/available/rejected; refuse (409) when reserved/traded/claimed or referenced by a trade                                                                                                                                                                                                           |
+| `joinWaitlist({email,zip,source})` / `adminListWaitlist()`                       | upsert on `lower(email)`: a repeat signup updates `zip`, `source`, `updated_at` and is not an error / newest first                                                                                                                                                                                                                                    |
 | `users.adminList()`                                                             | users joined with `credit_balance`, completed-trade count, accepted-batch count, `is_returning_trader`, `isAdmin` computed in TS                                                                                                                                                                                                                      |
 
-Signed-in submissions use the session email (name from the form). Guests may use any valid email.
+Signed-in submissions use the session email (name from the form). Guests may use any valid email. `submitTrade` and `submitDonation` also take the validated `zip` and store it.
 
 ## 8. API contract
 
@@ -173,8 +179,9 @@ Auth levels: **P** public · **S** signed-in · **A** admin.
 | GET `/api/trader-status?email=`                                   | P    | —                                                                                      | `{returning, requiredGiven}` (leaks only a boolean; accepted)                             |
 | GET `/api/puzzles?theme=&pieces=`                                 | P    | —                                                                                      | `{id, name, pieces, theme, condition, imageUrl}[]`; available only; **no submitter data** |
 | POST `/api/upload`                                                | P    | multipart `puzzlePhoto` (≤10 MB; jpeg/png/webp/gif/heic; HEIC converted)               | `{imageUrl}`                                                                              |
-| POST `/api/donations`                                             | P    | `{name, email, puzzles: PuzzleInput[]}` (1–20)                                         | `{batchId, puzzleCount, returning, estimatedCredits}`                                     |
-| POST `/api/trades`                                                | P    | `{name, email, wantedPuzzleId, givenPuzzles: PuzzleInput[], dropoffDate, dropoffSlot}` | `{tradeId, tier}`                                                                         |
+| POST `/api/donations`                                             | P    | `{name, email, zip, puzzles: PuzzleInput[]}` (1–20)                                    | `{batchId, puzzleCount, returning, estimatedCredits}`                                     |
+| POST `/api/trades`                                                | P    | `{name, email, zip, wantedPuzzleId, givenPuzzles: PuzzleInput[], dropoffDate, dropoffSlot}` | `{tradeId, tier}`                                                                    |
+| POST `/api/waitlist`                                              | P    | `{email, zip, source?}` (10 per hour per IP)                                           | `{joined: true}`, 201 for new and repeat signups alike                                    |
 | POST `/api/redemptions`                                           | S    | `{puzzleIds: string[]}`                                                                | `{redemptionId, creditsSpent, balance}`                                                   |
 | GET `/api/me/credits`                                             | S    | —                                                                                      | `{balance, entries[]}`                                                                    |
 | GET `/api/me/history`                                             | S    | —                                                                                      | `{trades[], donations[], redemptions[]}`                                                  |
@@ -187,6 +194,9 @@ Auth levels: **P** public · **S** signed-in · **A** admin.
 | GET `/api/admin/redemptions` · POST `/api/admin/redemptions/[id]` | A    | `{action: 'fulfill' \| 'cancel'}`                                                      | `AdminRedemption`                                                                         |
 | GET `/api/admin/users`                                            | A    | —                                                                                      | users with balance, counts, tier, isAdmin                                                 |
 | GET `/api/admin/credit-entries`                                   | A    | —                                                                                      | ledger                                                                                    |
+| GET `/api/admin/waitlist`                                         | A    | —                                                                                      | `{id, email, zip, source, createdAt}[]`                                                   |
+
+A missing, malformed, or out-of-area `zip` on `/api/trades` or `/api/donations` returns 400 with `field: "zip"`. `/api/waitlist` checks the ZIP format only.
 
 `PuzzleInput = {name (≤120), pieces ∈ PIECES, theme ∈ THEMES, condition ∈ CONDITIONS, imageUrl (must start with "/uploads/")}` is the single puzzle shape used by donate, trade, and admin inventory.
 
@@ -219,15 +229,17 @@ Auth levels: **P** public · **S** signed-in · **A** admin.
 
 | Route                                                                                                   | Content                                                                                                                                                                                     |
 | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                                                                                                     | hero video (≤3 MB mp4, muted, loop, poster, cream overlay), phrase, three buttons, "How it works" Donate/Choose/Swap, quote, footer                                                         |
-| `/about`                                                                                                | mission, values (spec order, sentence case), story, quote, founder photo, founder card with `mailto:info@papaspuzzles.org`                                                                  |
+| `/`                                                                                                     | hero video (≤3 MB mp4, muted, loop, poster, 60% black tint), Los Angeles badge, reason and waitlist link, buttons, "How it works" Donate/Choose/Swap, charity partner band, quote, footer                                                         |
+| `/about`                                                                                                | mission, values (spec order, sentence case), charity partner (`#charity`), story, quote, founder photo, founder card with `mailto:info@papaspuzzles.org`                                                                  |
 | `/explore`                                                                                              | PuzzleFilters (theme, pieces) + PuzzleCard grid; "Start a Trade" → `/trade?wanted=id`; "Use credits" when signed in with balance > 0                                                        |
-| `/trade`                                                                                                | Stepper: 1 Info (prefilled from session; TraderStatusNotice explains 2-for-1 vs 1-for-1) → 2 Your puzzles (PuzzleFormList fixedCount) → 3 Pick a puzzle + drop-off date/slot → confirmation |
-| `/donate`                                                                                               | Info + PuzzleFormList → success "Once approved you'll have about N credits" + sign-up nudge                                                                                                 |
+| `/trade`                                                                                                | Stepper: 1 Info (prefilled from session; ZIP code; TraderStatusNotice explains 2-for-1 vs 1-for-1; ServiceAreaNotice beside the form when outside the area) → 2 Your puzzles (PuzzleFormList fixedCount) → 3 Pick a puzzle + drop-off date/slot → confirmation |
+| `/donate`                                                                                               | Info with ZIP code + PuzzleFormList (ServiceAreaNotice beside the form when outside the area) → success "Once approved you'll have about N credits" + sign-up nudge                                                                                                 |
 | `/credits`                                                                                              | session gate; balance header; PuzzlePicker multi `max=balance`; confirmation "Pick-up pending"                                                                                              |
 | `/my-trades`                                                                                            | session gate; Trades, Donations, Pickups sections                                                                                                                                           |
+| `/faq`                                                                                                  | three always-open question cards from `FAQ` in `content/site.ts`                                                                                                                            |
+| `/waitlist`                                                                                             | WaitlistForm (email, ZIP code)                                                                                                                                                              |
 | `/reset-password`                                                                                       | token from URL, new password form                                                                                                                                                           |
-| `/admin/*`                                                                                              | server-gated layout (404 for non-admins); AdminNav → puzzles, inventory, trades, donations, users; DataTable with status filters and row actions                                            |
+| `/admin/*`                                                                                              | server-gated layout (404 for non-admins); AdminNav → puzzles, inventory, trades, donations, users, waitlist; DataTable with status filters and row actions                                            |
 | Root metadata: title "Papa's Puzzles", description from the phrase, favicon and OG image from the logo. |
 
 ## 10. Security
@@ -236,6 +248,7 @@ Auth levels: **P** public · **S** signed-in · **A** admin.
 - Identity: every mutation derives the user from the session cookie; client-supplied ids are never trusted. Guest submissions carry only name and email.
 - Public reads expose no personal data (`/api/puzzles` projects public columns only). `/api/me/*` are session-only; the old `?email=` lookup is gone.
 - Input: every field validated against the constants; arrays bounded (≤20 puzzles per submission, ≤balance per redemption); ids UUID-checked; `imageUrl` must be a local upload path.
+- Service area: the ZIP rule is enforced in the route handlers, not only in the forms. A ZIP is self-declared, so this is a courtesy gate, not proof of location. Waitlist emails are readable only through the admin route, and the public signup answers the same way for new and existing emails.
 - Errors: standard envelope; raw Postgres messages logged server-side only.
 - Uploads: size and type checks kept; add magic-byte sniffing for jpeg/png/webp/gif, `X-Content-Type-Options: nosniff` on served files, and a per-IP rate limit (in-memory token bucket, sufficient for one instance).
 - Auth hardening: rate limit sign-in and forgot-password per IP; password minimum 8; reset invalidates other sessions by storing a `session_version` on `users` and embedding it in the JWT (small addition to `session.ts`); reset-link origin taken only from `APP_URL`.
@@ -249,6 +262,7 @@ Auth levels: **P** public · **S** signed-in · **A** admin.
 - Backups: Railway Postgres volume snapshots; uploads live on the app volume. Document a manual `pg_dump` procedure in the README.
 - Logging: structured `console.error` with route name; no secrets in logs.
 - Rollback: redeploy previous Railway deployment; migrations are forward-only, so schema changes are written to be backward compatible after this rebuild.
+- Legacy data: the May 2026 Firebase inventory (112 puzzles) was imported once with `scripts/import-firebase.mjs` from `db/seed/firebase-donations.json`; see the README for the dry-run/apply/undo commands.
 
 ## 12. Testing and quality
 
@@ -283,3 +297,6 @@ Optional, needs explicit approval because it rewrites history and force-pushes: 
 - **Existing production data**: only test rows; the fresh migration drops them. Confirm before Phase 7.
 - **History rewrite** for the media files is deferred pending approval.
 - **Founder review needed**: the estimated-credits wording on the donate confirmation, and the four drop-off slots.
+- **Narrow service area**: only ZIP 90049 is accepted, so visitors elsewhere in Los Angeles are sent to the waitlist even though the site says "Los Angeles only". Expanding is a one-line change to `SERVICE_ZIPS`.
+- **Founder review needed (2026-09-29)**: the charity introduction sentence, the outside-the-area message, and the interim FAQ answer for the drop-off location (the site sends no trade emails, so sharing the location is done by hand).
+- **Smoke runs and rate limits**: a smoke run makes 8 to 9 donation posts against a limit of 10 per hour per IP, so a second run within the hour needs a dev-server restart.

@@ -11,6 +11,40 @@ export const SITE = {
         "Papa's Puzzles operates on trust. If you receive a puzzle with missing pieces, please let us know by email at",
 } as const;
 
+export const SERVICE_AREA = {
+    badge: 'In-person puzzle swaps · Los Angeles only',
+    reason: "Because swaps happen in person, we're starting with LA.",
+    waitlistCta: 'Not in LA? Join the waitlist',
+    zipHint: 'Swaps happen in person, so we check that you are in our Los Angeles service area.',
+    blockedTitle: "We're not in your area yet",
+    blockedText:
+        "Because swaps happen in person, we're starting with LA. Join the waitlist and we'll email you when Papa's Puzzles comes to you.",
+    waitlistSuccess: "You're on the list. We'll email you when we expand to your area.",
+} as const;
+
+export const CHARITY = {
+    name: 'Los Angeles Jewish Health',
+    tagline: 'Energizing Senior Life',
+    homeTitle: 'Our charity partner',
+    intro: "Puzzles given to charity through Papa's Puzzles go to Los Angeles Jewish Health.",
+    // In the charity's own words, so pages show it as an attributed quote.
+    quote: 'We offer a holistic approach to healthy aging. Our comprehensive selection of programs is designed to meet you where you are in life and provide services tailored to your individual needs – with a focus on mind, body and spirit.',
+} as const;
+
+/** Interim wording. Replace with the real location once the founder decides it. */
+export const DROPOFF_LOCATION =
+    "We're finalising the drop-off location and will share it when your trade is confirmed.";
+
+export const FAQ = [
+    { q: 'What condition should puzzles be in?', a: 'Lightly used or new.', showEmail: false },
+    {
+        q: 'What happens if pieces are missing?',
+        a: 'Contact us through email and we can discuss further arrangements.',
+        showEmail: true,
+    },
+    { q: 'Where exactly do I drop off?', a: DROPOFF_LOCATION, showEmail: false },
+] as const;
+
 export const STEPS = [
     {
         title: 'Donate',

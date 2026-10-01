@@ -8,6 +8,7 @@ import type {
     THEMES,
     TRADE_STATUSES,
     TRADER_TIERS,
+    WAITLIST_SOURCES,
 } from './constants';
 
 export type Theme = (typeof THEMES)[number];
@@ -20,6 +21,7 @@ export type TradeStatus = (typeof TRADE_STATUSES)[number];
 export type BatchStatus = (typeof BATCH_STATUSES)[number];
 export type RedemptionStatus = (typeof REDEMPTION_STATUSES)[number];
 export type TraderTier = (typeof TRADER_TIERS)[number];
+export type WaitlistSource = (typeof WAITLIST_SOURCES)[number];
 
 /** The one puzzle shape used by donate, trade, and admin inventory forms. */
 export interface PuzzleInput {
@@ -145,6 +147,14 @@ export interface AdminUser {
     acceptedBatches: number;
     returning: boolean;
     isAdmin: boolean;
+}
+
+export interface WaitlistEntry {
+    id: string;
+    email: string;
+    zip: string;
+    source: WaitlistSource;
+    createdAt: string;
 }
 
 export interface History {

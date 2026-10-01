@@ -8,6 +8,7 @@ import {
     validateDropoffSlot,
     validateEmail,
     validatePuzzleInputs,
+    validateServiceZip,
     validateString,
     validateUuid,
 } from '@/lib/validate';
@@ -25,6 +26,8 @@ export const POST = handle('trades', async (request) => {
 
     const name = validateString(body.name, 'name', 'Name', MAX_NAME_LENGTH);
     const email = user ? user.email : validateEmail(body.email);
+    // Checked here as well as on the page: swaps are in person, so the area rule must hold for every caller.
+    const zip = validateServiceZip(body.zip);
     const wantedPuzzleId = validateUuid(body.wantedPuzzleId, 'wantedPuzzleId', 'The puzzle you want');
     // The service enforces the exact count: max(1, 1 - balance), so 2 at the starting -1
     // and more only while earlier trades are still pending. The cap here just bounds the payload.
@@ -35,7 +38,7 @@ export const POST = handle('trades', async (request) => {
     const dropoffSlot = validateDropoffSlot(body.dropoffSlot);
 
     return ok(
-        await submitTrade({ name, email, wantedPuzzleId, givenPuzzles, dropoffDate, dropoffSlot }),
+        await submitTrade({ name, email, zip, wantedPuzzleId, givenPuzzles, dropoffDate, dropoffSlot }),
         201
     );
 });

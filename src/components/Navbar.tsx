@@ -14,6 +14,7 @@ const LINKS = [
     { href: '/donate', label: 'Donate' },
     { href: '/my-trades', label: 'My Trades' },
     { href: '/about', label: 'About Us' },
+    { href: '/faq', label: 'FAQ' },
 ];
 
 export function Navbar() {

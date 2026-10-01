@@ -1,12 +1,14 @@
 # Papa's Puzzles — Product Overview
 
-Founder: Berkeley Katz · Contact: info@papaspuzzles.org · Last clarified: 2026-09-04
+Founder: Berkeley Katz · Contact: info@papaspuzzles.org · Last clarified: 2026-09-29
 
 The technical design that implements this document lives in [docs/technical-design.md](docs/technical-design.md).
 
 ## 1. Vision
 
 The overall goal of Papa's Puzzles is to be a nonprofit organization and to be extended to other regions and cities such as San Francisco. There would be numerous branches being run by different students at a school in that area. That would happen once I become successful in the Los Angeles branch.
+
+For now Papa's Puzzles is **Los Angeles only**, because swaps happen in person. Visitors from elsewhere can join a waitlist (email and ZIP code) so we know where to expand next.
 
 Papa's Puzzles works as a puzzle trading system which trades puzzlers' old puzzles for exciting new ones. New puzzlers trade using two of their puzzles and pick one from the collection. One of the puzzles they give goes to a pre-picked charity. Returning traders have a 1-for-1 trading system. Anyone can also simply donate puzzles and gain credits that they can use to claim puzzles in the future.
 
@@ -30,9 +32,16 @@ Papa's Puzzles works as a puzzle trading system which trades puzzlers' old puzzl
 4. You choose a drop-off date and a time slot (10 AM, 12 PM, 2 PM, or 4 PM).
 5. After the hand-off, the admin **accepts** the trade: the puzzles you gave are approved and each adds a credit. If the trade does not happen, the admin **rejects** it, the picked puzzle goes back on Explore, and the credit is refunded.
 
+### Service area
+
+1. Start a Trade and Donate Now both ask for a ZIP code. The website only accepts ZIP codes on the founder's service-area list, and checks this on the server as well as on the page.
+2. The list currently holds one ZIP code: **90049**. The ZIP code is saved with the trade or donation.
+3. A visitor outside the area sees a friendly message with a waitlist form instead of an error. Joining twice with the same email keeps one entry with the latest ZIP code.
+4. Use Your Credits is not checked by ZIP code.
+
 ### Donate Now
 
-1. Enter your name, email, and one or more puzzles ("Add Another Puzzle" as many times as you like).
+1. Enter your name, email, ZIP code, and one or more puzzles ("Add Another Puzzle" as many times as you like).
 2. Puzzles go into review. When the admin **accepts** your donation, the puzzles appear on Explore and you earn credits.
 3. Credits: each puzzle adds one credit when the admin accepts it. The admin reviews each puzzle in a donation individually (or accepts the rest of a donation at once). Because everyone starts at −1, a first donation of one puzzle brings you to 0.
 4. After submitting you see how the donation will move your balance once approved.
@@ -44,7 +53,7 @@ Papa's Puzzles works as a puzzle trading system which trades puzzlers' old puzzl
 
 ### Charity
 
-Which of a new trader's two puzzles goes to charity is decided offline. The website does not track it.
+Our charity partner is **Los Angeles Jewish Health**. The website names the partner on Home and About Us. Which of a new trader's two puzzles goes to charity is decided offline. The website does not track it.
 
 ### Photo check
 
@@ -52,15 +61,15 @@ The admin's review is the check that a photo is a real puzzle. There is no autom
 
 ## 4. Website pages
 
-**Home** — the video, the phrase, the 3 steps (Donate, Choose, Swap), the quote, and the 3 buttons: **Start a Trade**, **Donate Now**, **Use Your Credits**. Colors match the logo.
+**Home** — the video, the phrase, the 3 steps (Donate, Choose, Swap), the quote, and the 3 buttons: **Start a Trade**, **Donate Now**, **Use Your Credits**. Colors match the logo. Under the headline: the badge "In-person puzzle swaps · Los Angeles only", the reason, and a "Not in LA? Join the waitlist" link. Below the 3 steps: a charity partner band linking to About Us.
 
 **Start a Trade** — a form with 3 stages:
 
-1. Info (name, email). The site tells you whether you are a new or returning trader.
+1. Info (name, email, ZIP code). The site tells you whether you are a new or returning trader.
 2. Puzzle info (name, pieces, theme, photo) — two forms for new traders, one for returning.
 3. Choose the puzzle you want, then pick a drop-off date and time slot.
 
-**Donate Now** — same puzzle form as Start a Trade, one or more puzzles, with "Add Another Puzzle". Ends with the credits message above.
+**Donate Now** — name, email, ZIP code, and the same puzzle form as Start a Trade, one or more puzzles, with "Add Another Puzzle". Ends with the credits message above.
 
 **Use Your Credits** — shows your balance and lets you pick that many puzzles.
 
@@ -70,20 +79,25 @@ The admin's review is the check that a photo is a real puzzle. There is no autom
 
 **Sign in** — create an account or sign in with email and password; reset password by email.
 
-**About Us** — Mission Statement, Our Values, Our Story, the quote, the founder photo, and the founder's info (Berkeley Katz, Papa's Puzzles Founder, info@papaspuzzles.org).
+**About Us** — Mission Statement, Our Values, Our Charity Partner, Our Story, the quote, the founder photo, and the founder's info (Berkeley Katz, Papa's Puzzles Founder, info@papaspuzzles.org).
+
+**FAQ** — three questions: puzzle condition, missing pieces, and where to drop off.
+
+**Waitlist** — email and ZIP code for visitors outside Los Angeles.
 
 **Admin** (founder's account only) —
 
 - **Puzzles**: every puzzle with a status column; edit and delete only. Accepting and rejecting happens on the Trades and Donations pages so those pages and this one never disagree. Deleting an accepted puzzle keeps the donor's credit.
 - **Add Inventory**: add puzzles with the same fields as Donate but without personal information.
 - **Users**: everyone who has made an account, with credits and trader status.
+- **Waitlist**: everyone who joined the waitlist, with ZIP code and where they signed up.
 - **Trades**: every trade with drop-off details; mark completed or cancelled.
 - **Donations & Credits**: pending donations, reviewed puzzle by puzzle (accept, reject, restore) with an accept-all/reject-all for the rest of a batch; a donation shows as accepted once every puzzle is reviewed and at least one was accepted; credits awarded; credit pick-ups to accept or reject; an adjust-credits form and the ledger.
 
 ## 5. Out of scope for now
 
-- Multiple branches or regions.
-- Charity tracking.
+- Multiple branches or regions (the waitlist only collects interest).
+- Charity tracking (the partner is named, but individual puzzles are not tracked).
 - Automated photo checking.
 - Requesting a puzzle that is not in the collection.
 
@@ -110,6 +124,27 @@ At Papa's Puzzles, we strive to develop a joyful trading system where one can tr
 _Memories_ — Berkeley Katz, our founder, has always enjoyed doing puzzles. She goes to Oregon every year where she enjoys beautiful views and early mornings working on puzzles with her grandpa, who also shares this passion. Since then, she has been ordering puzzles and had the problem of not knowing what to do once she has completed them. She could either let them sit around or recycle them for a better cause.
 
 _Now it all started_ — Berkeley began to have what almost seemed like an obsession with puzzles. Every spare minute would be her enjoying one. She realized that once she finished one it would just lay around, so she wanted to be able to upcycle while still being able to receive new puzzles! Once she initiated the idea, there was nothing holding her back. Ever since then, she has been so excited for new people to experience the joy and excitement Papa's Puzzles bring.
+
+**Service area**
+
+- Badge: In-person puzzle swaps · Los Angeles only
+- Reason: Because swaps happen in person, we're starting with LA.
+- Waitlist link: Not in LA? Join the waitlist
+- Outside the area _(needs founder approval)_: We're not in your area yet. Because swaps happen in person, we're starting with LA. Join the waitlist and we'll email you when Papa's Puzzles comes to you.
+
+**Charity partner**
+
+Los Angeles Jewish Health: Energizing Senior Life. Shown as a quote from the charity:
+
+"We offer a holistic approach to healthy aging. Our comprehensive selection of programs is designed to meet you where you are in life and provide services tailored to your individual needs – with a focus on mind, body and spirit."
+
+Introduced with _(needs founder approval)_: Puzzles given to charity through Papa's Puzzles go to Los Angeles Jewish Health.
+
+**FAQ**
+
+- _What condition should puzzles be in?_ Lightly used or new.
+- _What happens if pieces are missing?_ Contact us through email and we can discuss further arrangements.
+- _Where exactly do I drop off?_ To be decided. Until then the site says _(needs founder approval)_: We're finalising the drop-off location and will share it when your trade is confirmed.
 
 **Founder**
 Berkeley Katz, Papa's Puzzles Founder — info@papaspuzzles.org

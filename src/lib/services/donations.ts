@@ -40,6 +40,7 @@ function toSummary(row: BatchRow): DonationBatchSummary {
 export interface SubmitDonationInput {
     name: string;
     email: string;
+    zip: string;
     puzzles: PuzzleInput[];
 }
 
@@ -58,8 +59,8 @@ export interface SubmitDonationResult {
 export async function submitDonation(input: SubmitDonationInput): Promise<SubmitDonationResult> {
     return withTransaction(async (client) => {
         const batch = await queryOne<{ id: string }>(
-            `insert into donation_batches (donor_name, donor_email) values ($1, $2) returning id`,
-            [input.name, input.email],
+            `insert into donation_batches (donor_name, donor_email, zip) values ($1, $2, $3) returning id`,
+            [input.name, input.email, input.zip],
             client
         );
         const batchId = (batch as { id: string }).id;

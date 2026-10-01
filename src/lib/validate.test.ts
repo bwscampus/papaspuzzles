@@ -9,6 +9,7 @@ import {
     validatePuzzleInput,
     validatePuzzleInputs,
     validateUuidArray,
+    validateZip,
 } from './validate';
 
 const goodPuzzle = {
@@ -109,6 +110,19 @@ describe('dates and slots', () => {
     it('rejects other formats', () => {
         expect(() => validateDate('09/10/2026', 'dropoffDate')).toThrow(ApiError);
         expect(() => validateDropoffSlot('15:00')).toThrow(ApiError);
+    });
+});
+
+describe('validateZip', () => {
+    it('returns the 5-digit form', () => {
+        expect(validateZip(' 90012 ')).toBe('90012');
+        expect(validateZip('90012-1234')).toBe('90012');
+    });
+    it('names the zip field for missing, numeric, and malformed values', () => {
+        expect(fieldOf(() => validateZip(undefined))).toBe('zip');
+        expect(fieldOf(() => validateZip(''))).toBe('zip');
+        expect(fieldOf(() => validateZip(90012))).toBe('zip');
+        expect(fieldOf(() => validateZip('9001'))).toBe('zip');
     });
 });
 

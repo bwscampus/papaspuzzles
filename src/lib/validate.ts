@@ -10,6 +10,8 @@ import {
     PIECES,
     THEMES,
     UPLOAD_URL_PREFIX,
+    isServiceZip,
+    normalizeZip,
 } from './constants';
 import type { Condition, Pieces, PuzzleInput, Theme } from './types';
 
@@ -83,6 +85,26 @@ export function validateDate(value: unknown, field: string, label = field): stri
 
 export function validateDropoffSlot(value: unknown, field = 'dropoffSlot'): string {
     return validateEnum(value, DROPOFF_SLOT_VALUES, field, 'Drop-off time');
+}
+
+export function validateZip(value: unknown, field = 'zip'): string {
+    const zip = typeof value === 'string' ? normalizeZip(value) : null;
+    if (zip === null) {
+        throw validationError('Please enter a 5-digit ZIP code.', field);
+    }
+    return zip;
+}
+
+/** A well-formed ZIP that is also inside the service area. */
+export function validateServiceZip(value: unknown, field = 'zip'): string {
+    const zip = validateZip(value, field);
+    if (!isServiceZip(zip)) {
+        throw validationError(
+            "Sorry, we're only in Los Angeles right now. You can join the waitlist instead.",
+            field
+        );
+    }
+    return zip;
 }
 
 export function validateImageUrl(value: unknown, field: string): string {

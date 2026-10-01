@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { PageShell } from '@/components/PageShell';
 import { PuzzleFormList } from '@/components/PuzzleFormList';
+import { ServiceAreaNotice } from '@/components/ServiceAreaNotice';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -17,6 +18,8 @@ import {
     type DraftErrors,
     type PuzzleDraft,
 } from '@/lib/client/puzzleDraft';
+import { SERVICE_AREA } from '@/content/site';
+import { isServiceZip, normalizeZip } from '@/lib/constants';
 
 interface Result {
     puzzleCount: number;
@@ -28,7 +31,8 @@ export default function DonatePage() {
     const [email, setEmail] = useState('');
     const [drafts, setDrafts] = useState<PuzzleDraft[]>(() => [emptyDraft()]);
     const [errors, setErrors] = useState<Record<string, DraftErrors>>({});
-    const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string }>({});
+    const [zip, setZip] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; zip?: string }>({});
     const [formError, setFormError] = useState('');
     const [busy, setBusy] = useState(false);
     const [result, setResult] = useState<Result | null>(null);
@@ -41,9 +45,13 @@ export default function DonatePage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
+    const normalizedZip = normalizeZip(zip);
+    const outsideArea = normalizedZip !== null && !isServiceZip(normalizedZip);
+
     const submit = async (e: FormEvent) => {
         e.preventDefault();
-        if (busy) return;
+        // Outside the area the notice below the form explains and offers the waitlist.
+        if (busy || outsideArea) return;
         setFormError('');
         setFieldErrors({});
 
@@ -55,6 +63,7 @@ export default function DonatePage() {
         const nextField: typeof fieldErrors = {};
         if (!name.trim()) nextField.name = 'Name is required.';
         if (!user && !email.trim()) nextField.email = 'Email is required.';
+        if (normalizedZip === null) nextField.zip = 'Please enter a 5-digit ZIP code.';
         setErrors(nextErrors);
         setFieldErrors(nextField);
         if (Object.keys(nextErrors).length || Object.keys(nextField).length) {
@@ -67,6 +76,7 @@ export default function DonatePage() {
             const data = await api.post<Result>('/api/donations', {
                 name,
                 email,
+                zip: normalizedZip,
                 puzzles: drafts.map(draftToInput),
             });
             setResult(data);
@@ -75,7 +85,7 @@ export default function DonatePage() {
             if (err instanceof ApiClientError) {
                 const mapped = applyServerFieldError(err.field, 'puzzles', err.message, drafts);
                 if (mapped) setErrors(mapped);
-                else if (err.field === 'name' || err.field === 'email')
+                else if (err.field === 'name' || err.field === 'email' || err.field === 'zip')
                     setFieldErrors({ [err.field]: err.message });
             }
             setFormError(errorMessage(err));
@@ -145,6 +155,17 @@ export default function DonatePage() {
                             }
                             autoComplete="email"
                         />
+                        <Input
+                            label="ZIP code"
+                            value={zip}
+                            onChange={(e) => setZip(e.target.value)}
+                            error={fieldErrors.zip}
+                            hint={SERVICE_AREA.zipHint}
+                            inputMode="numeric"
+                            autoComplete="postal-code"
+                            maxLength={10}
+                            className="sm:col-span-2"
+                        />
                     </div>
                 </Card>
 
@@ -156,11 +177,14 @@ export default function DonatePage() {
                 {formError && <Alert tone="error">{formError}</Alert>}
 
                 <div className="flex justify-end">
-                    <Button type="submit" size="lg" loading={busy}>
+                    <Button type="submit" size="lg" loading={busy} disabled={outsideArea}>
                         Submit donation
                     </Button>
                 </div>
             </form>
+            {outsideArea && normalizedZip && (
+                <ServiceAreaNotice source="donate" email={email} zip={normalizedZip} />
+            )}
         </PageShell>
     );
 }
