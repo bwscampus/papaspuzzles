@@ -8,7 +8,6 @@ export interface PuzzleRow {
     name: string;
     pieces: number;
     theme: string;
-    condition: string;
     image_url: string;
     status: string;
     source: string;
@@ -21,7 +20,7 @@ export interface PuzzleRow {
 }
 
 export const PUZZLE_COLUMNS =
-    'id, name, pieces, theme, condition, image_url, status, source, donation_batch_id, given_in_trade_id, submitted_by_name, submitted_by_email, reviewed_at, created_at';
+    'id, name, pieces, theme, image_url, status, source, donation_batch_id, given_in_trade_id, submitted_by_name, submitted_by_email, reviewed_at, created_at';
 
 export function toPublicPuzzle(row: PuzzleRow): PublicPuzzle {
     return {
@@ -29,7 +28,6 @@ export function toPublicPuzzle(row: PuzzleRow): PublicPuzzle {
         name: row.name,
         pieces: row.pieces as Pieces,
         theme: row.theme as Theme,
-        condition: row.condition as PublicPuzzle['condition'],
         imageUrl: row.image_url,
     };
 }
@@ -93,10 +91,10 @@ export async function adminGet(id: string): Promise<AdminPuzzle> {
 
 export async function adminCreate(input: PuzzleInput): Promise<AdminPuzzle> {
     const row = await queryOne<PuzzleRow>(
-        `insert into puzzles (name, pieces, theme, condition, image_url, status, source, reviewed_at)
-         values ($1, $2, $3, $4, $5, 'available', 'admin', now())
+        `insert into puzzles (name, pieces, theme, image_url, status, source, reviewed_at)
+         values ($1, $2, $3, $4, 'available', 'admin', now())
          returning ${PUZZLE_COLUMNS}`,
-        [input.name, input.pieces, input.theme, input.condition, input.imageUrl]
+        [input.name, input.pieces, input.theme, input.imageUrl]
     );
     return toAdminPuzzle(row as PuzzleRow);
 }
@@ -119,7 +117,6 @@ export async function adminUpdate(id: string, patch: Partial<PuzzleInput>): Prom
             ['name', 'name'],
             ['pieces', 'pieces'],
             ['theme', 'theme'],
-            ['condition', 'condition'],
             ['imageUrl', 'image_url'],
         ];
         for (const [key, column] of columns) {

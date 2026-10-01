@@ -16,7 +16,6 @@ const goodPuzzle = {
     name: 'Salt Lake Winter',
     pieces: 1000,
     theme: 'Landscape',
-    condition: 'good',
     imageUrl: '/uploads/123-photo.jpg',
 };
 
@@ -65,9 +64,6 @@ describe('validatePuzzleInput', () => {
     it('names the failing field', () => {
         expect(fieldOf(() => validatePuzzleInput({ ...goodPuzzle, theme: 'Space' }, 'puzzles.1'))).toBe(
             'puzzles.1.theme'
-        );
-        expect(fieldOf(() => validatePuzzleInput({ ...goodPuzzle, condition: 'mint' }))).toBe(
-            'puzzle.condition'
         );
     });
     it('rejects difficulty-era and external image urls', () => {
@@ -123,18 +119,5 @@ describe('validateZip', () => {
         expect(fieldOf(() => validateZip(''))).toBe('zip');
         expect(fieldOf(() => validateZip(90012))).toBe('zip');
         expect(fieldOf(() => validateZip('9001'))).toBe('zip');
-    });
-});
-
-describe('condition (not collected by any form)', () => {
-    const base = { ...goodPuzzle };
-    it('defaults to n/a when omitted, empty, or n/a', () => {
-        expect(validatePuzzleInput({ ...base, condition: undefined }).condition).toBe('n/a');
-        expect(validatePuzzleInput({ ...base, condition: '' }).condition).toBe('n/a');
-        expect(validatePuzzleInput({ ...base, condition: 'n/a' }).condition).toBe('n/a');
-    });
-    it('still accepts and rejects explicit values', () => {
-        expect(validatePuzzleInput({ ...base, condition: 'good' }).condition).toBe('good');
-        expect(() => validatePuzzleInput({ ...base, condition: 'mint' })).toThrow(ApiError);
     });
 });

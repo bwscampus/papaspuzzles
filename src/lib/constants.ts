@@ -7,16 +7,6 @@ export const THEMES = ['Animals', 'Landscape', 'Art', 'Food', 'Cityscape', 'Movi
 /** Stored as the lower bound; 2000 is displayed as "2000+". */
 export const PIECES = [100, 300, 500, 1000, 2000] as const;
 
-/** Conditions a donor or trader can choose. Admin inventory stores CONDITION_NA instead. */
-export const CONDITIONS = ['new', 'good', 'fair'] as const;
-export const CONDITION_NA = 'n/a';
-export const CONDITION_LABELS: Record<(typeof CONDITIONS)[number] | typeof CONDITION_NA, string> = {
-    new: 'New',
-    good: 'Good',
-    fair: 'Fair',
-    'n/a': 'Not specified',
-};
-
 export const PUZZLE_STATUSES = [
     'pending_review',
     'available',

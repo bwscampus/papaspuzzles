@@ -3,13 +3,7 @@ import { requireAdmin } from '@/lib/auth';
 import { MAX_NAME_LENGTH, PIECES, THEMES } from '@/lib/constants';
 import { adminDelete, adminUpdate } from '@/lib/services/puzzles';
 import type { Pieces, PuzzleInput, Theme } from '@/lib/types';
-import {
-    validateCondition,
-    validateEnum,
-    validateImageUrl,
-    validateString,
-    validateUuid,
-} from '@/lib/validate';
+import { validateEnum, validateImageUrl, validateString, validateUuid } from '@/lib/validate';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,9 +23,6 @@ export const PATCH = handle<Ctx>('admin/puzzles/[id]', async (request, { params 
     if (body.pieces !== undefined)
         patch.pieces = validateEnum<Pieces>(body.pieces, PIECES, 'pieces', 'Piece count');
     if (body.theme !== undefined) patch.theme = validateEnum<Theme>(body.theme, THEMES, 'theme', 'Theme');
-    if (body.condition !== undefined) {
-        patch.condition = validateCondition(body.condition, 'condition');
-    }
     if (body.imageUrl !== undefined) patch.imageUrl = validateImageUrl(body.imageUrl, 'imageUrl');
 
     return ok(await adminUpdate(id, patch));

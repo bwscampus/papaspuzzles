@@ -288,8 +288,8 @@ async function importAll(client) {
         await writeFile(filePath, buf);
         try {
             await client.query(
-                `insert into puzzles (name, pieces, theme, condition, image_url, status, source, reviewed_at, created_at)
-                 values ($1, $2, $3, 'n/a', $4, 'available', 'admin', $5::timestamptz, $5::timestamptz)`,
+                `insert into puzzles (name, pieces, theme, image_url, status, source, reviewed_at, created_at)
+                 values ($1, $2, $3, $4, 'available', 'admin', $5::timestamptz, $5::timestamptz)`,
                 [row.name, row.pieces, row.theme, `/uploads/${fileName}`, row.createdAt]
             );
         } catch (err) {

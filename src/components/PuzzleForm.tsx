@@ -7,7 +7,6 @@ import { Input, Select } from './ui/Field';
 
 /**
  * The one puzzle-entry form, used by Donate, Start a Trade, and admin Add Inventory.
- * Condition is not collected anywhere; puzzles are stored with condition 'n/a'.
  */
 export function PuzzleForm({
     value,
