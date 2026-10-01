@@ -98,4 +98,17 @@ The app service builds with Railpack and starts with `npm run start`, which runs
 **Backups:** Railway snapshots the Postgres volume. For a manual export, use the Postgres service's public URL:
 `pg_dump "$DATABASE_PUBLIC_URL" > backup.sql`. Uploaded photos live on the app volume.
 
+**One-time imports:** the May 2026 inventory from the old Firebase site was imported with
+`scripts/import-firebase.mjs`, reading `db/seed/firebase-donations.json` (kept as the historical record).
+It runs inside the app container so it can write photos to the volume:
+
+```
+railway ssh --service papaspuzzles -- node scripts/import-firebase.mjs            # dry run, writes nothing
+railway ssh --service papaspuzzles -- node scripts/import-firebase.mjs --apply    # import (safe to re-run)
+railway ssh --service papaspuzzles -- node scripts/import-firebase.mjs --undo     # remove what it imported
+```
+
+Imported puzzles are admin inventory with photos at `/uploads/firebase-<id>.<ext>`; that prefix is how
+re-runs skip done records and how `--undo` finds them. Locally, prefix with `node --env-file=.env.local`.
+
 **Admin access:** sign up normally with an email listed in `ADMIN_EMAILS`; the Admin link appears in the nav.
