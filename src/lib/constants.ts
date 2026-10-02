@@ -4,8 +4,23 @@
 
 export const THEMES = ['Animals', 'Landscape', 'Art', 'Food', 'Cityscape', 'Movies', 'Other'] as const;
 
-/** Stored as the lower bound; 2000 is displayed as "2000+". */
-export const PIECES = [100, 300, 500, 1000, 2000] as const;
+/** Piece count is any whole number within these bounds (mirrored by the puzzles CHECK). */
+export const MIN_PIECES = 1;
+export const MAX_PIECES = 50000;
+
+/** Explore filter buckets. Contiguous from MIN_PIECES to MAX_PIECES so every count lands in one. */
+export const PIECE_RANGES = [
+    { value: '1-100', label: 'Up to 100', min: 1, max: 100 },
+    { value: '101-300', label: '101–300', min: 101, max: 300 },
+    { value: '301-500', label: '301–500', min: 301, max: 500 },
+    { value: '501-1000', label: '501–1000', min: 501, max: 1000 },
+    { value: '1001-', label: 'Over 1000', min: 1001, max: MAX_PIECES },
+] as const;
+export type PieceRange = (typeof PIECE_RANGES)[number];
+
+export function pieceRange(key: string): PieceRange | null {
+    return PIECE_RANGES.find((r) => r.value === key) ?? null;
+}
 
 export const PUZZLE_STATUSES = [
     'pending_review',
@@ -93,7 +108,7 @@ export function isServiceZip(zip: string, list: readonly string[] = SERVICE_ZIPS
 }
 
 export function pieceLabel(pieces: number): string {
-    return pieces >= 2000 ? '2000+' : String(pieces);
+    return String(pieces);
 }
 
 export function dropoffSlotLabel(value: string): string {

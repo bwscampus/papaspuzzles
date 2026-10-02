@@ -3,15 +3,16 @@ import {
     DROPOFF_SLOT_VALUES,
     EMAIL_RE,
     MAX_NAME_LENGTH,
+    MAX_PIECES,
     MAX_PUZZLES_PER_SUBMISSION,
     MIN_PASSWORD_LENGTH,
-    PIECES,
+    MIN_PIECES,
     THEMES,
     UPLOAD_URL_PREFIX,
     isServiceZip,
     normalizeZip,
 } from './constants';
-import type { Pieces, PuzzleInput, Theme } from './types';
+import type { PuzzleInput, Theme } from './types';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -113,12 +114,24 @@ export function validateImageUrl(value: unknown, field: string): string {
     return url;
 }
 
+/** Any whole number of pieces within the sane bounds; numeric strings from forms are accepted. */
+export function validatePieces(value: unknown, field: string): number {
+    const n = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+    if (typeof n !== 'number' || !Number.isInteger(n) || n < MIN_PIECES || n > MAX_PIECES) {
+        throw validationError(
+            `Piece count must be a whole number between ${MIN_PIECES} and ${MAX_PIECES}.`,
+            field
+        );
+    }
+    return n;
+}
+
 /** Validates one puzzle. `prefix` names the array slot for field-level errors, e.g. "puzzles.0". */
 export function validatePuzzleInput(raw: unknown, prefix = 'puzzle'): PuzzleInput {
     const p = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
     return {
         name: validateString(p.name, `${prefix}.name`, 'Puzzle name', MAX_NAME_LENGTH),
-        pieces: validateEnum<Pieces>(p.pieces, PIECES, `${prefix}.pieces`, 'Piece count'),
+        pieces: validatePieces(p.pieces, `${prefix}.pieces`),
         theme: validateEnum<Theme>(p.theme, THEMES, `${prefix}.theme`, 'Theme'),
         imageUrl: validateImageUrl(p.imageUrl, `${prefix}.imageUrl`),
     };

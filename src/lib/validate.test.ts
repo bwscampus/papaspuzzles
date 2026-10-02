@@ -6,6 +6,7 @@ import {
     validateEmail,
     validateEnum,
     validatePassword,
+    validatePieces,
     validatePuzzleInput,
     validatePuzzleInputs,
     validateUuidArray,
@@ -52,6 +53,21 @@ describe('validateEnum', () => {
     });
     it('rejects values outside the list', () => {
         expect(() => validateEnum('Space', ['Animals', 'Art'] as const, 'theme')).toThrow(/must be one of/);
+    });
+});
+
+describe('validatePieces', () => {
+    it('accepts any whole number in range, including numeric strings', () => {
+        expect(validatePieces(750, 'pieces')).toBe(750);
+        expect(validatePieces('759', 'pieces')).toBe(759);
+        expect(validatePieces(1, 'pieces')).toBe(1);
+        expect(validatePieces(50000, 'pieces')).toBe(50000);
+    });
+    it('rejects zero, negatives, fractions, text, and out-of-range counts with the field name', () => {
+        for (const bad of [0, -5, 1.5, 'abc', '', undefined, 50001]) {
+            expect(() => validatePieces(bad, 'puzzles.0.pieces')).toThrow(ApiError);
+            expect(fieldOf(() => validatePieces(bad, 'puzzles.0.pieces'))).toBe('puzzles.0.pieces');
+        }
     });
 });
 

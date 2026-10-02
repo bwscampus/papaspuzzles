@@ -1,7 +1,7 @@
 import { conflict, notFound, validationError } from '@/lib/api';
 import { syncBatchStatus } from './review';
 import { iso, query, queryOne, withTransaction, type Queryable } from '@/lib/db';
-import type { AdminPuzzle, Pieces, PublicPuzzle, PuzzleInput, PuzzleStatus, Theme } from '@/lib/types';
+import type { AdminPuzzle, PublicPuzzle, PuzzleInput, PuzzleStatus, Theme } from '@/lib/types';
 
 export interface PuzzleRow {
     id: string;
@@ -26,7 +26,7 @@ export function toPublicPuzzle(row: PuzzleRow): PublicPuzzle {
     return {
         id: row.id,
         name: row.name,
-        pieces: row.pieces as Pieces,
+        pieces: row.pieces,
         theme: row.theme as Theme,
         imageUrl: row.image_url,
     };
@@ -46,7 +46,10 @@ export function toAdminPuzzle(row: PuzzleRow): AdminPuzzle {
     };
 }
 
-export async function listAvailable(filters: { theme?: Theme; pieces?: Pieces }): Promise<PublicPuzzle[]> {
+export async function listAvailable(filters: {
+    theme?: Theme;
+    pieces?: { min: number; max: number };
+}): Promise<PublicPuzzle[]> {
     const where = ["status = 'available'"];
     const params: unknown[] = [];
     if (filters.theme) {
@@ -54,8 +57,8 @@ export async function listAvailable(filters: { theme?: Theme; pieces?: Pieces })
         where.push(`theme = $${params.length}`);
     }
     if (filters.pieces) {
-        params.push(filters.pieces);
-        where.push(`pieces = $${params.length}`);
+        params.push(filters.pieces.min, filters.pieces.max);
+        where.push(`pieces between $${params.length - 1} and $${params.length}`);
     }
     const rows = await query<PuzzleRow>(
         `select ${PUZZLE_COLUMNS} from puzzles where ${where.join(' and ')} order by created_at desc`,

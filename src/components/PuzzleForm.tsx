@@ -1,6 +1,6 @@
 'use client';
 
-import { PIECES, THEMES, pieceLabel } from '@/lib/constants';
+import { MAX_PIECES, MIN_PIECES, THEMES } from '@/lib/constants';
 import type { DraftErrors, PuzzleDraft } from '@/lib/client/puzzleDraft';
 import { PhotoUpload } from './PhotoUpload';
 import { Input, Select } from './ui/Field';
@@ -29,13 +29,17 @@ export function PuzzleForm({
                 className="sm:col-span-2"
                 placeholder="e.g. Salt Lake Winter"
             />
-            <Select
+            <Input
                 label="Pieces"
+                type="number"
+                inputMode="numeric"
+                min={MIN_PIECES}
+                max={MAX_PIECES}
+                step={1}
                 value={value.pieces}
                 onChange={(e) => set({ pieces: e.target.value })}
                 error={errors.pieces}
-                placeholder="Choose…"
-                options={PIECES.map((p) => ({ value: p, label: pieceLabel(p) }))}
+                placeholder="e.g. 500"
             />
             <Select
                 label="Theme"

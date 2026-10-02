@@ -1,6 +1,6 @@
 'use client';
 
-import { PIECES, THEMES, pieceLabel } from '@/lib/constants';
+import { PIECE_RANGES, THEMES } from '@/lib/constants';
 import { Select } from './ui/Field';
 
 export interface Filters {
@@ -17,8 +17,8 @@ export function PuzzleFilters({ value, onChange }: { value: Filters; onChange: (
                 value={value.pieces}
                 onChange={(e) => onChange({ ...value, pieces: e.target.value })}
                 placeholder="All"
-                options={PIECES.map((p) => ({ value: p, label: pieceLabel(p) }))}
-                className="w-36"
+                options={PIECE_RANGES.map((r) => ({ value: r.value, label: r.label }))}
+                className="w-40"
             />
             <Select
                 label="Theme"
