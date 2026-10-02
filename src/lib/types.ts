@@ -1,7 +1,5 @@
 import type {
     BATCH_STATUSES,
-    CONDITIONS,
-    PIECES,
     PUZZLE_SOURCES,
     PUZZLE_STATUSES,
     REDEMPTION_STATUSES,
@@ -12,9 +10,6 @@ import type {
 } from './constants';
 
 export type Theme = (typeof THEMES)[number];
-export type Pieces = (typeof PIECES)[number];
-/** 'n/a' is only ever written by admin inventory. */
-export type Condition = (typeof CONDITIONS)[number] | 'n/a';
 export type PuzzleStatus = (typeof PUZZLE_STATUSES)[number];
 export type PuzzleSource = (typeof PUZZLE_SOURCES)[number];
 export type TradeStatus = (typeof TRADE_STATUSES)[number];
@@ -26,9 +21,8 @@ export type WaitlistSource = (typeof WAITLIST_SOURCES)[number];
 /** The one puzzle shape used by donate, trade, and admin inventory forms. */
 export interface PuzzleInput {
     name: string;
-    pieces: Pieces;
+    pieces: number;
     theme: Theme;
-    condition: Condition;
     imageUrl: string;
 }
 
@@ -53,9 +47,8 @@ export interface TraderStatus {
 export interface PublicPuzzle {
     id: string;
     name: string;
-    pieces: Pieces;
+    pieces: number;
     theme: Theme;
-    condition: Condition;
     imageUrl: string;
 }
 

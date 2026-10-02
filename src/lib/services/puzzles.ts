@@ -1,14 +1,13 @@
 import { conflict, notFound, validationError } from '@/lib/api';
 import { syncBatchStatus } from './review';
 import { iso, query, queryOne, withTransaction, type Queryable } from '@/lib/db';
-import type { AdminPuzzle, Pieces, PublicPuzzle, PuzzleInput, PuzzleStatus, Theme } from '@/lib/types';
+import type { AdminPuzzle, PublicPuzzle, PuzzleInput, PuzzleStatus, Theme } from '@/lib/types';
 
 export interface PuzzleRow {
     id: string;
     name: string;
     pieces: number;
     theme: string;
-    condition: string;
     image_url: string;
     status: string;
     source: string;
@@ -21,15 +20,14 @@ export interface PuzzleRow {
 }
 
 export const PUZZLE_COLUMNS =
-    'id, name, pieces, theme, condition, image_url, status, source, donation_batch_id, given_in_trade_id, submitted_by_name, submitted_by_email, reviewed_at, created_at';
+    'id, name, pieces, theme, image_url, status, source, donation_batch_id, given_in_trade_id, submitted_by_name, submitted_by_email, reviewed_at, created_at';
 
 export function toPublicPuzzle(row: PuzzleRow): PublicPuzzle {
     return {
         id: row.id,
         name: row.name,
-        pieces: row.pieces as Pieces,
+        pieces: row.pieces,
         theme: row.theme as Theme,
-        condition: row.condition as PublicPuzzle['condition'],
         imageUrl: row.image_url,
     };
 }
@@ -48,7 +46,10 @@ export function toAdminPuzzle(row: PuzzleRow): AdminPuzzle {
     };
 }
 
-export async function listAvailable(filters: { theme?: Theme; pieces?: Pieces }): Promise<PublicPuzzle[]> {
+export async function listAvailable(filters: {
+    theme?: Theme;
+    pieces?: { min: number; max: number };
+}): Promise<PublicPuzzle[]> {
     const where = ["status = 'available'"];
     const params: unknown[] = [];
     if (filters.theme) {
@@ -56,8 +57,8 @@ export async function listAvailable(filters: { theme?: Theme; pieces?: Pieces })
         where.push(`theme = $${params.length}`);
     }
     if (filters.pieces) {
-        params.push(filters.pieces);
-        where.push(`pieces = $${params.length}`);
+        params.push(filters.pieces.min, filters.pieces.max);
+        where.push(`pieces between $${params.length - 1} and $${params.length}`);
     }
     const rows = await query<PuzzleRow>(
         `select ${PUZZLE_COLUMNS} from puzzles where ${where.join(' and ')} order by created_at desc`,
@@ -93,10 +94,10 @@ export async function adminGet(id: string): Promise<AdminPuzzle> {
 
 export async function adminCreate(input: PuzzleInput): Promise<AdminPuzzle> {
     const row = await queryOne<PuzzleRow>(
-        `insert into puzzles (name, pieces, theme, condition, image_url, status, source, reviewed_at)
-         values ($1, $2, $3, $4, $5, 'available', 'admin', now())
+        `insert into puzzles (name, pieces, theme, image_url, status, source, reviewed_at)
+         values ($1, $2, $3, $4, 'available', 'admin', now())
          returning ${PUZZLE_COLUMNS}`,
-        [input.name, input.pieces, input.theme, input.condition, input.imageUrl]
+        [input.name, input.pieces, input.theme, input.imageUrl]
     );
     return toAdminPuzzle(row as PuzzleRow);
 }
@@ -119,7 +120,6 @@ export async function adminUpdate(id: string, patch: Partial<PuzzleInput>): Prom
             ['name', 'name'],
             ['pieces', 'pieces'],
             ['theme', 'theme'],
-            ['condition', 'condition'],
             ['imageUrl', 'image_url'],
         ];
         for (const [key, column] of columns) {

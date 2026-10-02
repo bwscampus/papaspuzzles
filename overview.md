@@ -14,13 +14,13 @@ Papa's Puzzles works as a puzzle trading system which trades puzzlers' old puzzl
 
 ## 2. Definitions
 
-| Term                        | Meaning                                                                                                                                                                                                                                                                                                               |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Puzzle**                  | Has a name, piece count, theme, and a photo. Piece count is one of 100, 300, 500, 1000, 2000+. Theme is one of Animals, Landscape, Art, Food, Cityscape, Movies, Other. There is **no** condition and **no** easy / medium / hard category.                                                                           |
-| **Puzzle status**           | `pending review` (submitted, not yet public) → `available` (shown on Explore) → `reserved` (picked in a trade or with credits, hand-off not done yet) → `traded` (handed off in a trade) or `claimed` (handed off for credits). A puzzle can also be `rejected` by the admin. Explore shows only `available` puzzles. |
-| **Account**                 | Optional. Email + password. You need an account to use credits and to see My Trades. Everything is tied to your email, so anything you did as a guest shows up once you create an account with the same email.                                                                                                        |
-| **New vs returning trader** | Decided by your credit balance. Everyone starts at −1. At −1 you are **new**: your first trade is two puzzles for one. At 0 or more you are **returning**: one for one. The site also keeps two counters per email: puzzles added and puzzles taken. Decided from the email, so it works before signing in.           |
-| **Credit**                  | One credit claims one available puzzle. Credits never expire.                                                                                                                                                                                                                                                         |
+| Term                        | Meaning                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Puzzle**                  | Has a name, piece count, theme, and a photo. Piece count is any whole number and is shown exactly on the card; Explore filters by range (up to 100, 101–300, 301–500, 501–1000, over 1000). Theme is one of Animals, Landscape, Art, Food, Cityscape, Movies, Other. There is **no** condition and **no** easy / medium / hard category. |
+| **Puzzle status**           | `pending review` (submitted, not yet public) → `available` (shown on Explore) → `reserved` (picked in a trade or with credits, hand-off not done yet) → `traded` (handed off in a trade) or `claimed` (handed off for credits). A puzzle can also be `rejected` by the admin. Explore shows only `available` puzzles.                    |
+| **Account**                 | Optional. Email + password. You need an account to use credits and to see My Trades. Everything is tied to your email, so anything you did as a guest shows up once you create an account with the same email.                                                                                                                           |
+| **New vs returning trader** | Decided by your credit balance. Everyone starts at −1. At −1 you are **new**: your first trade is two puzzles for one. At 0 or more you are **returning**: one for one. The site also keeps two counters per email: puzzles added and puzzles taken. Decided from the email, so it works before signing in.                              |
+| **Credit**                  | One credit claims one available puzzle. Credits never expire.                                                                                                                                                                                                                                                                            |
 
 ## 3. Rules
 
@@ -35,7 +35,7 @@ Papa's Puzzles works as a puzzle trading system which trades puzzlers' old puzzl
 ### Service area
 
 1. Start a Trade and Donate Now both ask for a ZIP code. The website only accepts ZIP codes on the founder's service-area list, and checks this on the server as well as on the page.
-2. The list currently holds one ZIP code: **90049**. The ZIP code is saved with the trade or donation.
+2. The list currently holds eleven ZIP codes: **90049** (Brentwood), **90209, 90210, 90211, 90212, 90213** (Beverly Hills) and **90401, 90402, 90403, 90404, 90405** (Santa Monica), expanded on 2026-10-01. The ZIP code is saved with the trade or donation.
 3. A visitor outside the area sees a friendly message with a waitlist form instead of an error. Joining twice with the same email keeps one entry with the latest ZIP code.
 4. Use Your Credits is not checked by ZIP code.
 

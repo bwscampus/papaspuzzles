@@ -68,10 +68,10 @@ export async function submitDonation(input: SubmitDonationInput): Promise<Submit
         for (const p of input.puzzles) {
             await client.query(
                 `insert into puzzles
-                    (name, pieces, theme, condition, image_url, status, source, donation_batch_id,
+                    (name, pieces, theme, image_url, status, source, donation_batch_id,
                      submitted_by_name, submitted_by_email)
-                 values ($1, $2, $3, $4, $5, 'pending_review', 'donation', $6, $7, $8)`,
-                [p.name, p.pieces, p.theme, p.condition, p.imageUrl, batchId, input.name, input.email]
+                 values ($1, $2, $3, $4, 'pending_review', 'donation', $5, $6, $7)`,
+                [p.name, p.pieces, p.theme, p.imageUrl, batchId, input.name, input.email]
             );
         }
 

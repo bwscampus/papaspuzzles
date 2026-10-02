@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { SERVICE_ZIPS, isEmail, isServiceZip, normalizeEmail, normalizeZip, pieceLabel } from './constants';
+import {
+    MAX_PIECES,
+    MIN_PIECES,
+    PIECE_RANGES,
+    SERVICE_ZIPS,
+    isEmail,
+    isServiceZip,
+    normalizeEmail,
+    normalizeZip,
+    pieceLabel,
+    pieceRange,
+} from './constants';
 
 describe('isEmail', () => {
     it('accepts padded and mixed-case addresses', () => {
@@ -51,8 +62,23 @@ describe('SERVICE_ZIPS', () => {
 });
 
 describe('pieceLabel', () => {
-    it('labels the top bucket as 2000+', () => {
+    it('shows the exact count', () => {
         expect(pieceLabel(500)).toBe('500');
-        expect(pieceLabel(2000)).toBe('2000+');
+        expect(pieceLabel(2000)).toBe('2000');
+        expect(pieceLabel(759)).toBe('759');
+    });
+});
+
+describe('PIECE_RANGES', () => {
+    it('covers every count from MIN_PIECES to MAX_PIECES with no gaps or overlaps', () => {
+        expect(PIECE_RANGES[0].min).toBe(MIN_PIECES);
+        expect(PIECE_RANGES[PIECE_RANGES.length - 1].max).toBe(MAX_PIECES);
+        for (let i = 1; i < PIECE_RANGES.length; i++) {
+            expect(PIECE_RANGES[i].min).toBe(PIECE_RANGES[i - 1].max + 1);
+        }
+    });
+    it('looks up a bucket by key', () => {
+        expect(pieceRange('301-500')).toMatchObject({ min: 301, max: 500 });
+        expect(pieceRange('500')).toBeNull();
     });
 });
