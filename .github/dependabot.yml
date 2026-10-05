@@ -1,5 +1,5 @@
 # Production Standard OPS-2: weekly dependency updates, all in ONE pull request.
-# PRs target staging, which is where work lands before main. Dependabot reads
+# The group targets staging, which is where work lands before main. Dependabot reads
 # this file from the default branch (main), so changes here must be merged to main.
 #
 # npm and GitHub Actions join the same multi-ecosystem group, so a week's updates
@@ -14,13 +14,14 @@ version: 2
 
 multi-ecosystem-groups:
     all-dependencies:
+        # target-branch belongs on the group; Dependabot rejects it on the grouped entries.
+        target-branch: staging
         schedule:
             interval: weekly
 
 updates:
     - package-ecosystem: npm
       directory: /
-      target-branch: staging
       patterns: ['*']
       multi-ecosystem-group: all-dependencies
       # Next.js 16, ESLint 10, eslint-config-next 16 and Tailwind 4 depend on each other
@@ -40,6 +41,5 @@ updates:
 
     - package-ecosystem: github-actions
       directory: /
-      target-branch: staging
       patterns: ['*']
       multi-ecosystem-group: all-dependencies
