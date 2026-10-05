@@ -140,3 +140,14 @@ Imported puzzles are admin inventory with photos at `/uploads/firebase-<id>.<ext
 re-runs skip done records and how `--undo` finds them. Locally, prefix with `node --env-file=.env.local`.
 
 **Admin access:** sign up normally with an email listed in `ADMIN_EMAILS` and confirm it via the emailed link; the Admin link appears in the nav once verified.
+
+## License
+
+Papa's Puzzles is source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE.md).
+Copyright 2026 The Papa's Puzzles founders.
+
+- **Noncommercial use is free.** Personal study, learning, hobby projects, schools, and nonprofits may
+  use, copy, modify, and share the code, as long as they include the license and its `Required Notice:` line.
+- **Commercial use is reserved to the founders,** who keep all rights to the code and the product. To ask
+  about commercial use, open an issue on this repository.
+- Third-party libraries and assets keep their own licenses.
