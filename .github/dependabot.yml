@@ -3,9 +3,9 @@
 # this file from the default branch (main), so changes here must be merged to main.
 #
 # npm and GitHub Actions join the same multi-ecosystem group, so a week's updates
-# land together and CI runs once over the combined change. This includes major
-# versions (e.g. Tailwind 4, ESLint 10). If one bump breaks the build, fix it in
-# the PR or add it to `ignore` on its ecosystem below.
+# land together and CI runs once over the combined change. Major versions are
+# included, except the coupled Next/ESLint/Tailwind majors held back below. If a
+# bump breaks the build, fix it in the PR or add it to `ignore` on its ecosystem.
 #
 # If the grouped PR falls behind staging, comment `@dependabot rebase` rather than
 # clicking "Update branch", so package-lock.json is rebuilt instead of text-merged.
@@ -23,6 +23,20 @@ updates:
       target-branch: staging
       patterns: ['*']
       multi-ecosystem-group: all-dependencies
+      # Next.js 16, ESLint 10, eslint-config-next 16 and Tailwind 4 depend on each other
+      # (eslint-config-next 16 needs ESLint flat config and Next 16; Tailwind 4 needs
+      # @tailwindcss/postcss and a CSS-based theme). Bumped one at a time they fail CI and
+      # block the whole weekly group, so their majors are held for a planned upgrade
+      # (docs/SECURITY-GAPS.md, OPS-2). Minor and patch releases still come through.
+      ignore:
+          - dependency-name: next
+            update-types: ['version-update:semver-major']
+          - dependency-name: eslint
+            update-types: ['version-update:semver-major']
+          - dependency-name: eslint-config-next
+            update-types: ['version-update:semver-major']
+          - dependency-name: tailwindcss
+            update-types: ['version-update:semver-major']
 
     - package-ecosystem: github-actions
       directory: /
