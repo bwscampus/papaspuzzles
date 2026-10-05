@@ -1,18 +1,31 @@
-# Production Standard OPS-2: weekly update PRs for app dependencies and GitHub Actions.
-# PRs target staging, which is where work lands before main.
+# Production Standard OPS-2: weekly dependency updates, all in ONE pull request.
+# PRs target staging, which is where work lands before main. Dependabot reads
+# this file from the default branch (main), so changes here must be merged to main.
+#
+# npm and GitHub Actions join the same multi-ecosystem group, so a week's updates
+# land together and CI runs once over the combined change. This includes major
+# versions (e.g. Tailwind 4, ESLint 10). If one bump breaks the build, fix it in
+# the PR or add it to `ignore` on its ecosystem below.
+#
+# If the grouped PR falls behind staging, comment `@dependabot rebase` rather than
+# clicking "Update branch", so package-lock.json is rebuilt instead of text-merged.
+# Security updates still arrive as their own PRs.
 version: 2
+
+multi-ecosystem-groups:
+    all-dependencies:
+        schedule:
+            interval: weekly
+
 updates:
     - package-ecosystem: npm
       directory: /
       target-branch: staging
-      schedule:
-          interval: weekly
-      open-pull-requests-limit: 5
-      groups:
-          minor-and-patch:
-              update-types: [minor, patch]
+      patterns: ['*']
+      multi-ecosystem-group: all-dependencies
+
     - package-ecosystem: github-actions
       directory: /
       target-branch: staging
-      schedule:
-          interval: weekly
+      patterns: ['*']
+      multi-ecosystem-group: all-dependencies
