@@ -1,6 +1,6 @@
 # Security gaps: Papa's Puzzles
 
-This is an audit against the class [Production Standard](../.claude/skills/production-standard/references/standard.md),
+This is an audit against the class [Production Standard](PRODUCTION_STANDARD.md),
 done in October 2026. Rule IDs (AUTH-2, API-4, …) refer to that document. The `production-standard`
 agent skill checks the same rules, so run it before you finish any change to auth, the database,
 API routes, or deploy config.

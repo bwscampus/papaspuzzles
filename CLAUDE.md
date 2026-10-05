@@ -5,10 +5,11 @@ Next.js 15 (App Router) + Postgres (raw `pg`, SQL migrations in `db/migrations`)
 
 ## Production Standard
 
-This project follows the class Production Standard (`.claude/skills/production-standard/references/standard.md`).
+This project follows the class Production Standard (snapshot: `docs/PRODUCTION_STANDARD.md`; canonical: the global
+`production-standard` skill).
 
 - Before finishing any change that touches auth, the database or migrations, API routes, rendering of
-  user content, uploads, env vars, or deploy/CI config, run the `production-standard` skill and fix
+  user content, uploads, env vars, or deploy/CI config, run the global `production-standard` skill (and `database-security` for database work) and fix
   any Critical/High finding it reports.
 - Known gaps and their status live in `docs/SECURITY-GAPS.md`. Update it when you fix or find one.
 - Identity comes from the session, never the request body. Credits, history, and admin rights require
