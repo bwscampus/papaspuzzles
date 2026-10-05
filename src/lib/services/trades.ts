@@ -118,10 +118,10 @@ export async function submitTrade(input: SubmitTradeInput): Promise<{ tradeId: s
         for (const p of input.givenPuzzles) {
             await client.query(
                 `insert into puzzles
-                    (name, pieces, theme, condition, image_url, status, source, given_in_trade_id,
+                    (name, pieces, theme, image_url, status, source, given_in_trade_id,
                      submitted_by_name, submitted_by_email)
-                 values ($1, $2, $3, $4, $5, 'pending_review', 'trade', $6, $7, $8)`,
-                [p.name, p.pieces, p.theme, p.condition, p.imageUrl, tradeId, input.name, input.email]
+                 values ($1, $2, $3, $4, 'pending_review', 'trade', $5, $6, $7)`,
+                [p.name, p.pieces, p.theme, p.imageUrl, tradeId, input.name, input.email]
             );
         }
 

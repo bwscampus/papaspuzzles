@@ -14,13 +14,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/client/api';
 import { draftToInput, validateDraft, type DraftErrors, type PuzzleDraft } from '@/lib/client/puzzleDraft';
-import {
-    CONDITION_LABELS,
-    CONDITION_NA,
-    PUZZLE_STATUSES,
-    PUZZLE_STATUS_LABELS,
-    pieceLabel,
-} from '@/lib/constants';
+import { PUZZLE_STATUSES, PUZZLE_STATUS_LABELS, pieceLabel } from '@/lib/constants';
 import type { AdminPuzzle } from '@/lib/types';
 
 function toDraft(p: AdminPuzzle): PuzzleDraft {
@@ -29,7 +23,6 @@ function toDraft(p: AdminPuzzle): PuzzleDraft {
         name: p.name,
         pieces: String(p.pieces),
         theme: p.theme,
-        condition: p.condition,
         imageUrl: p.imageUrl,
     };
 }
@@ -82,7 +75,6 @@ export default function AdminPuzzlesPage() {
                             <p className="font-semibold">{p.name}</p>
                             <p className="text-xs text-muted">
                                 {pieceLabel(p.pieces)} pcs · {p.theme}
-                                {p.condition !== CONDITION_NA && ` · ${CONDITION_LABELS[p.condition]}`}
                             </p>
                         </div>
                     </div>

@@ -6,6 +6,7 @@ import {
     validateEmail,
     validateEnum,
     validatePassword,
+    validatePieces,
     validatePuzzleInput,
     validatePuzzleInputs,
     validateUuidArray,
@@ -16,7 +17,6 @@ const goodPuzzle = {
     name: 'Salt Lake Winter',
     pieces: 1000,
     theme: 'Landscape',
-    condition: 'good',
     imageUrl: '/uploads/123-photo.jpg',
 };
 
@@ -56,6 +56,21 @@ describe('validateEnum', () => {
     });
 });
 
+describe('validatePieces', () => {
+    it('accepts any whole number in range, including numeric strings', () => {
+        expect(validatePieces(750, 'pieces')).toBe(750);
+        expect(validatePieces('759', 'pieces')).toBe(759);
+        expect(validatePieces(1, 'pieces')).toBe(1);
+        expect(validatePieces(50000, 'pieces')).toBe(50000);
+    });
+    it('rejects zero, negatives, fractions, text, and out-of-range counts with the field name', () => {
+        for (const bad of [0, -5, 1.5, 'abc', '', undefined, 50001]) {
+            expect(() => validatePieces(bad, 'puzzles.0.pieces')).toThrow(ApiError);
+            expect(fieldOf(() => validatePieces(bad, 'puzzles.0.pieces'))).toBe('puzzles.0.pieces');
+        }
+    });
+});
+
 describe('validatePuzzleInput', () => {
     it('returns a normalized PuzzleInput', () => {
         expect(validatePuzzleInput({ ...goodPuzzle, pieces: '1000', name: '  Salt Lake Winter ' })).toEqual(
@@ -65,9 +80,6 @@ describe('validatePuzzleInput', () => {
     it('names the failing field', () => {
         expect(fieldOf(() => validatePuzzleInput({ ...goodPuzzle, theme: 'Space' }, 'puzzles.1'))).toBe(
             'puzzles.1.theme'
-        );
-        expect(fieldOf(() => validatePuzzleInput({ ...goodPuzzle, condition: 'mint' }))).toBe(
-            'puzzle.condition'
         );
     });
     it('rejects difficulty-era and external image urls', () => {
@@ -123,18 +135,5 @@ describe('validateZip', () => {
         expect(fieldOf(() => validateZip(''))).toBe('zip');
         expect(fieldOf(() => validateZip(90012))).toBe('zip');
         expect(fieldOf(() => validateZip('9001'))).toBe('zip');
-    });
-});
-
-describe('condition (not collected by any form)', () => {
-    const base = { ...goodPuzzle };
-    it('defaults to n/a when omitted, empty, or n/a', () => {
-        expect(validatePuzzleInput({ ...base, condition: undefined }).condition).toBe('n/a');
-        expect(validatePuzzleInput({ ...base, condition: '' }).condition).toBe('n/a');
-        expect(validatePuzzleInput({ ...base, condition: 'n/a' }).condition).toBe('n/a');
-    });
-    it('still accepts and rejects explicit values', () => {
-        expect(validatePuzzleInput({ ...base, condition: 'good' }).condition).toBe('good');
-        expect(() => validatePuzzleInput({ ...base, condition: 'mint' })).toThrow(ApiError);
     });
 });

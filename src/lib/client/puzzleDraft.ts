@@ -1,12 +1,5 @@
-import {
-    CONDITIONS,
-    CONDITION_NA,
-    MAX_NAME_LENGTH,
-    PIECES,
-    THEMES,
-    UPLOAD_URL_PREFIX,
-} from '@/lib/constants';
-import type { Condition, Pieces, PuzzleInput, Theme } from '@/lib/types';
+import { MAX_NAME_LENGTH, MAX_PIECES, MIN_PIECES, THEMES, UPLOAD_URL_PREFIX } from '@/lib/constants';
+import type { PuzzleInput, Theme } from '@/lib/types';
 
 /** Form state for one puzzle before it is validated into a PuzzleInput. */
 export interface PuzzleDraft {
@@ -14,8 +7,6 @@ export interface PuzzleDraft {
     name: string;
     pieces: string;
     theme: string;
-    /** Not collected by any form; kept so existing puzzles can be edited without losing it. */
-    condition: string;
     imageUrl: string;
 }
 
@@ -29,7 +20,6 @@ export function emptyDraft(overrides: Partial<Omit<PuzzleDraft, 'key'>> = {}): P
         name: '',
         pieces: '',
         theme: '',
-        condition: CONDITION_NA,
         imageUrl: '',
         ...overrides,
     };
@@ -46,13 +36,10 @@ export function validateDraft(draft: PuzzleDraft): DraftErrors {
     if (!draft.name.trim()) errors.name = 'Puzzle name is required.';
     else if (draft.name.length > MAX_NAME_LENGTH)
         errors.name = `Keep it under ${MAX_NAME_LENGTH} characters.`;
-    if (!PIECES.includes(Number(draft.pieces) as Pieces)) errors.pieces = 'Choose a piece count.';
+    const pieces = Number(draft.pieces);
+    if (!draft.pieces.trim() || !Number.isInteger(pieces) || pieces < MIN_PIECES || pieces > MAX_PIECES)
+        errors.pieces = 'Enter the number of pieces.';
     if (!THEMES.includes(draft.theme as Theme)) errors.theme = 'Choose a theme.';
-    const conditionOk =
-        draft.condition === '' ||
-        draft.condition === CONDITION_NA ||
-        CONDITIONS.includes(draft.condition as (typeof CONDITIONS)[number]);
-    if (!conditionOk) errors.condition = 'Invalid condition.';
     if (!draft.imageUrl.startsWith(UPLOAD_URL_PREFIX))
         errors.imageUrl = 'Please upload a photo of the puzzle.';
     return errors;
@@ -61,9 +48,8 @@ export function validateDraft(draft: PuzzleDraft): DraftErrors {
 export function draftToInput(draft: PuzzleDraft): PuzzleInput {
     return {
         name: draft.name.trim(),
-        pieces: Number(draft.pieces) as Pieces,
+        pieces: Number(draft.pieces),
         theme: draft.theme as Theme,
-        condition: (draft.condition || CONDITION_NA) as Condition,
         imageUrl: draft.imageUrl,
     };
 }

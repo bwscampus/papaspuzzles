@@ -19,7 +19,8 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import pg from 'pg';
 
-const PIECES = new Set([100, 300, 500, 1000, 2000]);
+const MIN_PIECES = 1;
+const MAX_PIECES = 50000;
 const THEMES = new Set(['Animals', 'Landscape', 'Art', 'Food', 'Cityscape', 'Movies', 'Other']);
 const MAX_NAME_LENGTH = 120;
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
@@ -74,7 +75,9 @@ function mapRecord(doc) {
     if (name.length > MAX_NAME_LENGTH) notes.push(`name truncated from ${name.length} chars`);
 
     const pieces = Number(String(doc.pieces ?? '').trim());
-    if (!PIECES.has(pieces)) return { ok: false, reason: `pieces=${doc.pieces}` };
+    if (!Number.isInteger(pieces) || pieces < MIN_PIECES || pieces > MAX_PIECES) {
+        return { ok: false, reason: `pieces=${doc.pieces}` };
+    }
 
     const rawTheme = String(doc.theme ?? '')
         .trim()
@@ -288,8 +291,8 @@ async function importAll(client) {
         await writeFile(filePath, buf);
         try {
             await client.query(
-                `insert into puzzles (name, pieces, theme, condition, image_url, status, source, reviewed_at, created_at)
-                 values ($1, $2, $3, 'n/a', $4, 'available', 'admin', $5::timestamptz, $5::timestamptz)`,
+                `insert into puzzles (name, pieces, theme, image_url, status, source, reviewed_at, created_at)
+                 values ($1, $2, $3, $4, 'available', 'admin', $5::timestamptz, $5::timestamptz)`,
                 [row.name, row.pieces, row.theme, `/uploads/${fileName}`, row.createdAt]
             );
         } catch (err) {
