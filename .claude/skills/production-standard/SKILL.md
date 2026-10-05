@@ -40,18 +40,18 @@ reporting it. Skip `node_modules`, `.venv`, `.next`, `dist`, and build output.
 
 ```bash
 # FE-1 user data into HTML (vanilla JS / React)
-grep -rnE "innerHTML\s*[+]?=|insertAdjacentHTML|outerHTML\s*=" --include=*.js --include=*.ts --include=*.tsx . | grep -v node_modules
-grep -rn "dangerouslySetInnerHTML" --include=*.tsx --include=*.jsx . | grep -v node_modules
+grep -rnE "innerHTML\s*[+]?=|insertAdjacentHTML|outerHTML\s*=" --include='*.js' --include='*.ts' --include='*.tsx' . | grep -v node_modules
+grep -rn "dangerouslySetInnerHTML" --include='*.tsx' --include='*.jsx' . | grep -v node_modules
 # DB-1 string-built SQL
-grep -rnE "(execute|text|query)\(\s*f[\"']|sql\.raw|\.query\(\s*`[^`]*\\\$\{" --include=*.py --include=*.ts . | grep -v node_modules
+grep -rnE "(execute|text|query)\(\s*f[\"']|sql\.raw|\.query\(\s*`[^`]*\\\$\{" --include='*.py' --include='*.ts' . | grep -v node_modules
 # FE-2 / DB-3 secrets in client code or the repo
-grep -rnE "(sk-|sk_live|re_[A-Za-z0-9]{10,}|AIza|ghp_|PASSPHRASE|SECRET\s*=\s*['\"][^'\"]{8,})" --include=*.js --include=*.ts --include=*.tsx --include=*.swift --include=*.plist --include=*.html . | grep -v node_modules
-grep -rn "NEXT_PUBLIC_" --include=*.ts --include=*.tsx . | grep -v node_modules
+grep -rnE "(sk-|sk_live|re_[A-Za-z0-9]{10,}|AIza|ghp_|PASSPHRASE|SECRET\s*=\s*['\"][^'\"]{8,})" --include='*.js' --include='*.ts' --include='*.tsx' --include='*.swift' --include='*.plist' --include='*.html' . | grep -v node_modules
+grep -rn "NEXT_PUBLIC_" --include='*.ts' --include='*.tsx' . | grep -v node_modules
 git ls-files | grep -E "(^|/)\.env($|\.)" | grep -v example
 # API-8 PII / tokens in logs
-grep -rnE "(console\.(log|info|error)|logger\.(info|warning|error)|print)\(.*(email|token|password|reset|body)" --include=*.py --include=*.ts . | grep -v node_modules
+grep -rnE "(console\.(log|info|error)|logger\.(info|warning|error)|print)\(.*(email|token|password|reset|body)" --include='*.py' --include='*.ts' . | grep -v node_modules
 # FE-4 zoom lock
-grep -rn "maximum-scale=1" --include=*.html .
+grep -rn "maximum-scale=1" --include='*.html' .
 ```
 
 Then do the checks that need reading, not grepping:
