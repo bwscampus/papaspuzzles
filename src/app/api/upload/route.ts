@@ -23,12 +23,9 @@ export const POST = handle('upload', async (request) => {
 
     if (type === 'image/heic') {
         try {
-            const raw = buffer.buffer.slice(
-                buffer.byteOffset,
-                buffer.byteOffset + buffer.byteLength
-            ) as ArrayBuffer;
-            const converted = await convert({ buffer: raw, format: 'JPEG', quality: 0.8 });
-            buffer = Buffer.from(new Uint8Array(converted));
+            // heic-convert takes and returns a Uint8Array, which a Buffer already is.
+            const converted = await convert({ buffer, format: 'JPEG', quality: 0.8 });
+            buffer = Buffer.from(converted);
             type = 'image/jpeg';
         } catch (error) {
             console.error('[upload] HEIC conversion failed', error);
