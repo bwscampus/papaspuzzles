@@ -1,10 +1,11 @@
 import { conflict, handle, ok, readJson } from '@/lib/api';
-import { toUser, type UserRow } from '@/lib/auth';
+import { toUser, USER_COLUMNS, type UserRow } from '@/lib/auth';
 import { MAX_NAME_LENGTH } from '@/lib/constants';
 import { queryOne } from '@/lib/db';
 import { clientIp, rateLimit } from '@/lib/rateLimit';
 import { createSession, hashPassword } from '@/lib/session';
 import { validateEmail, validatePassword, validateString } from '@/lib/validate';
+import { sendVerificationEmail } from '@/lib/verification';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,10 +24,15 @@ export const POST = handle('auth/signup', async (request) => {
 
     const row = await queryOne<UserRow>(
         `insert into users (email, display_name, password_hash) values ($1, $2, $3)
-         returning id, email, display_name, session_version`,
+         returning ${USER_COLUMNS}`,
         [email, name, await hashPassword(password)]
     );
     const user = row as UserRow;
     await createSession(user.id, user.session_version);
+    // The account works without verification; credits, history, and admin unlock after it.
+    // A failed send must not fail signup, since the user can resend from My Trades.
+    await sendVerificationEmail(request, user).catch((error) =>
+        console.error('[auth/signup] verification email failed', error)
+    );
     return ok({ user: toUser(user) }, 201);
 });
