@@ -21,17 +21,19 @@ npm run migrate                         # applies db/migrations/*.sql
 npm run dev                             # http://localhost:3000
 ```
 
-| Variable         | Purpose                                                                                  |
-| ---------------- | ---------------------------------------------------------------------------------------- |
-| `DATABASE_URL`   | Postgres connection string                                                               |
-| `SESSION_SECRET` | Long random string for signing login cookies (`openssl rand -hex 32`)                    |
-| `ADMIN_EMAILS`   | Comma-separated emails whose accounts can open `/admin` once the email is **verified**   |
-| `UPLOAD_DIR`     | Directory for uploaded photos (default `./uploads`)                                      |
-| `APP_URL`        | Public URL used in password-reset emails (required in production)                        |
-| `RESEND_API_KEY` | Required in production (reset + verification emails). Locally, emails are suppressed     |
-| `EMAIL_DEV_LOG`  | Local only: `1` prints suppressed emails (with links) to the server log                  |
-| `EMAIL_FROM`     | Optional sender for reset and verification emails                                        |
-| `DATABASE_SSL`   | Optional `true`/`false` override. Defaults to off for `*.railway.internal` and localhost |
+| Variable                 | Purpose                                                                                            |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`           | Postgres connection string                                                                         |
+| `MIGRATION_DATABASE_URL` | Owner connection used by `npm run migrate`. Falls back to `DATABASE_URL` (fine locally)            |
+| `APP_DB_PASSWORD`        | Production: password for the restricted `app_rw_login` role that migrate creates and keeps updated |
+| `SESSION_SECRET`         | Long random string for signing login cookies (`openssl rand -hex 32`)                              |
+| `ADMIN_EMAILS`           | Comma-separated emails whose accounts can open `/admin` once the email is **verified**             |
+| `UPLOAD_DIR`             | Directory for uploaded photos (default `./uploads`)                                                |
+| `APP_URL`                | Public URL used in password-reset emails (required in production)                                  |
+| `RESEND_API_KEY`         | Required in production (reset + verification emails). Locally, emails are suppressed               |
+| `EMAIL_DEV_LOG`          | Local only: `1` prints suppressed emails (with links) to the server log                            |
+| `EMAIL_FROM`             | Optional sender for reset and verification emails                                                  |
+| `DATABASE_SSL`           | Optional `true`/`false` override. Defaults to off for `*.railway.internal` and localhost           |
 
 ### Commands
 
@@ -99,8 +101,30 @@ The app service builds with Railpack and starts with `npm run start`, which runs
 - `RESEND_API_KEY` + `EMAIL_FROM`: required. Without them signup can't send verification links, so
   nobody (admins included) can unlock credits or `/admin`, and the server logs a CONFIG ERROR at startup
 
-**Backups:** Railway snapshots the Postgres volume. For a manual export, use the Postgres service's public URL:
-`pg_dump "$DATABASE_PUBLIC_URL" > backup.sql`. Uploaded photos live on the app volume.
+**Backups:** production Postgres has daily (kept 6 days) and weekly (kept 27 days) snapshots plus
+point-in-time recovery (any moment in roughly the last 4 weeks), all in Railway → Postgres → Backups.
+Restores go into a new Postgres service, so you can check it before switching `DATABASE_URL`.
+Uploaded photos live on the app volume and are not covered by the database backups.
+
+### Least-privilege database user (not yet applied in production)
+
+`npm run migrate` runs as the database **owner** and, after migrations, creates the group role `app_rw`
+(read/write rows only: no schema changes, no superuser, no RLS bypass). When `APP_DB_PASSWORD` is set it
+also creates the login `app_rw_login` in that group and re-applies its password on every deploy.
+The app should connect as `app_rw_login` so a bug or injection can't drop tables or touch roles.
+
+Cut-over, per environment (do `staging` first, then `production`), after this code is deployed:
+
+1. App service → Variables: add `APP_DB_PASSWORD` (random, e.g. `openssl rand -hex 24`) and **seal** it.
+2. Add `MIGRATION_DATABASE_URL=${{Postgres.DATABASE_URL}}` (the owner, for migrations).
+3. Change `DATABASE_URL` to
+   `postgresql://app_rw_login:${{APP_DB_PASSWORD}}@${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}`.
+   The redeploy runs migrate (as owner, creating the login) and then starts the app as `app_rw_login`.
+4. Check: the site loads, `/api/puzzles` returns 200, sign in and do one write (e.g. join the waitlist).
+
+**Rollback:** set `DATABASE_URL` back to `${{Postgres.DATABASE_URL}}`. Nothing else needs undoing.
+
+To verify the role locally or in CI: `MIGRATION_DATABASE_URL=… APP_DATABASE_URL=postgresql://app_rw_login:…@… node scripts/check-app-role.mjs`.
 
 **One-time imports:** the May 2026 inventory from the old Firebase site was imported with
 `scripts/import-firebase.mjs`, reading `db/seed/firebase-donations.json` (kept as the historical record).
