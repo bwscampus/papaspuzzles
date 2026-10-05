@@ -5,8 +5,7 @@ Next.js 15 (App Router) + Postgres (raw `pg`, SQL migrations in `db/migrations`)
 
 ## Production Standard
 
-This project follows the class Production Standard (snapshot: `docs/PRODUCTION_STANDARD.md`; canonical: the global
-`production-standard` skill).
+This project follows the class Production Standard (the global `production-standard` skill).
 
 - Before finishing any change that touches auth, the database or migrations, API routes, rendering of
   user content, uploads, env vars, or deploy/CI config, run the global `production-standard` skill (and `database-security` for database work) and fix
