@@ -45,6 +45,11 @@ describe('validatePassword', () => {
         expect(() => validatePassword('short')).toThrow(/at least 8/);
         expect(validatePassword('longenough')).toBe('longenough');
     });
+    it('rejects the most common passwords, case-insensitively (AUTH-1)', () => {
+        expect(() => validatePassword('password1')).toThrow(/most commonly used/);
+        expect(() => validatePassword('QWERTYUIOP')).toThrow(/most commonly used/);
+        expect(validatePassword('correct horse battery staple')).toBe('correct horse battery staple');
+    });
 });
 
 describe('validateEnum', () => {

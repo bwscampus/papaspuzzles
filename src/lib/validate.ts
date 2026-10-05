@@ -13,6 +13,7 @@ import {
     normalizeZip,
 } from './constants';
 import type { PuzzleInput, Theme } from './types';
+import { COMMON_PASSWORDS } from './commonPasswords';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -41,6 +42,12 @@ export function validatePassword(value: unknown, field = 'password'): string {
     }
     if (value.length > 200) {
         throw validationError('Password is too long.', field);
+    }
+    if (COMMON_PASSWORDS.has(value.toLowerCase())) {
+        throw validationError(
+            'That password is one of the most commonly used, so it is easy to guess. Please choose another.',
+            field
+        );
     }
     return value;
 }
