@@ -1,0 +1,18 @@
+# Production Standard OPS-2: weekly update PRs for app dependencies and GitHub Actions.
+# PRs target staging, which is where work lands before main.
+version: 2
+updates:
+    - package-ecosystem: npm
+      directory: /
+      target-branch: staging
+      schedule:
+          interval: weekly
+      open-pull-requests-limit: 5
+      groups:
+          minor-and-patch:
+              update-types: [minor, patch]
+    - package-ecosystem: github-actions
+      directory: /
+      target-branch: staging
+      schedule:
+          interval: weekly
