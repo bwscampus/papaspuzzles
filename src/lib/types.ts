@@ -30,6 +30,8 @@ export interface User {
     id: string;
     email: string;
     displayName: string | null;
+    /** Credits, history, and admin rights stay locked until the email is verified. */
+    emailVerified: boolean;
     isAdmin: boolean;
 }
 
@@ -42,6 +44,9 @@ export interface TraderStatus {
     puzzlesAdded: number;
     puzzlesTaken: number;
 }
+
+/** What the public trader-status endpoint reveals: only the trade rule for that email. */
+export type TraderRequirement = Pick<TraderStatus, 'requiredGiven'>;
 
 /** What Explore and the pickers see. Never includes submitter data. */
 export interface PublicPuzzle {
@@ -158,7 +163,7 @@ export interface History {
 }
 
 export type ApiErrorCode =
-    'validation' | 'unauthorized' | 'forbidden' | 'not_found' | 'conflict' | 'internal';
+    'validation' | 'unauthorized' | 'forbidden' | 'not_found' | 'conflict' | 'rate_limited' | 'internal';
 
 export interface ApiErrorBody {
     code: ApiErrorCode;
