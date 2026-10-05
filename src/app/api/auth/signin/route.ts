@@ -1,5 +1,5 @@
 import { handle, ok, readJson, unauthorized } from '@/lib/api';
-import { toUser, type UserRow } from '@/lib/auth';
+import { toUser, USER_COLUMNS, type UserRow } from '@/lib/auth';
 import { queryOne } from '@/lib/db';
 import { clientIp, rateLimit } from '@/lib/rateLimit';
 import { createSession, hashPassword, verifyPassword } from '@/lib/session';
@@ -17,7 +17,7 @@ export const POST = handle('auth/signin', async (request) => {
     if (!email || !password) throw unauthorized('Incorrect email or password.');
 
     const row = await queryOne<UserRow & { password_hash: string }>(
-        'select id, email, display_name, session_version, password_hash from users where lower(email) = lower($1)',
+        `select ${USER_COLUMNS}, password_hash from users where lower(email) = lower($1)`,
         [email]
     );
 

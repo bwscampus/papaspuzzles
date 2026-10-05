@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 # End-to-end API smoke test. Exercises every business rule in docs/technical-design.md §7.
-# Usage: BASE=http://localhost:3000 ADMIN_EMAIL=founder@example.com scripts/smoke.sh
+# Usage: BASE=http://localhost:3000 ADMIN_EMAIL=founder@example.com ADMIN_PASSWORD=... \
+#        DATABASE_URL=postgres://... scripts/smoke.sh
 # Requires: curl, node. Creates throwaway accounts with random emails; safe to run repeatedly.
+# Local/staging only: DATABASE_URL is used to mark the test accounts' emails verified, because the
+# smoke test can't click a link in an inbox. Never point it at production.
 set -u
 
 BASE=${BASE:-http://localhost:3000}
 ADMIN_EMAIL=${ADMIN_EMAIL:?set ADMIN_EMAIL to an address listed in ADMIN_EMAILS}
+# No default: a password committed here would be a known admin password on any server it ran against.
+ADMIN_PASSWORD=${ADMIN_PASSWORD:?set ADMIN_PASSWORD (the admin account is created with it if missing)}
+: "${DATABASE_URL:?set DATABASE_URL to the same database the server uses}"
 RUN=$(date +%s)$RANDOM
 # A ZIP inside the service area (SERVICE_ZIPS in src/lib/constants.ts) and one outside it.
 ZIP=${SMOKE_ZIP:-90049}
@@ -27,16 +33,32 @@ check() { # check "label" "expected" "actual"
     if [ "$2" = "$3" ]; then PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; else FAIL=$((FAIL+1)); printf '  FAIL %s (expected %s, got %s)\n' "$1" "$2" "$3"; fi
 }
 field() { echo "$BODY" | json "$1"; }
+# Marks an account's email verified directly in the database (stands in for clicking the emailed link).
+verify_email() {
+    node -e 'const {Client}=require("pg");(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();await c.query("update users set email_verified_at = coalesce(email_verified_at, now()) where lower(email) = lower($1)",[process.argv[1]]);await c.end()})().catch(e=>{console.error(e.message);process.exit(1)})' "$1"
+}
 
 echo "== accounts"
 A=$TMP/admin.jar; U=$TMP/user.jar
 GUEST="guest-$RUN@example.com"; TRADER="trader-$RUN@example.com"
-call POST /api/auth/signup "$A" "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"smoke-pass-1\"}"
-[ "$STATUS" = 409 ] && call POST /api/auth/signin "$A" "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"smoke-pass-1\"}"
+call POST /api/auth/signup "$A" "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}"
+[ "$STATUS" = 201 ] && check "unverified admin email is not admin" "false" "$(field data.user.isAdmin)"
+verify_email "$ADMIN_EMAIL"
+call POST /api/auth/signin "$A" "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}"
 check "admin signed in" "true" "$(field data.user.isAdmin)"
 call POST /api/auth/signup "$U" "{\"email\":\"$GUEST\",\"password\":\"smoke-pass-1\",\"name\":\"Guest Person\"}"
 check "user signup 201" 201 "$STATUS"
 check "user is not admin" "false" "$(field data.user.isAdmin)"
+check "new account is unverified" "false" "$(field data.user.emailVerified)"
+call GET /api/me/history "$U"
+check "history locked until verified 403" 403 "$STATUS"
+call GET /api/me/credits "$U"
+check "credits locked until verified 403" 403 "$STATUS"
+call POST /api/auth/verify-email "" '{"token":"not-a-real-token"}'
+check "bogus verification token 400" 400 "$STATUS"
+verify_email "$GUEST"
+call GET /api/me/history "$U"
+check "history unlocked after verification 200" 200 "$STATUS"
 call POST /api/auth/signup "" "{\"email\":\"$GUEST\",\"password\":\"smoke-pass-1\"}"
 check "duplicate signup 409" 409 "$STATUS"
 call POST /api/auth/signin "" "{\"email\":\"$GUEST\",\"password\":\"wrong\"}"
@@ -96,7 +118,8 @@ check "accept twice 409" 409 "$STATUS"
 call GET /api/puzzles ""
 check "public list has no emails" "" "$(echo "$BODY" | grep -o 'example.com' | head -1)"
 call GET "/api/trader-status?email=$GUEST" ""
-check "donor is now returning" "true" "$(field data.returning)"
+check "donor is now returning (needs 1)" 1 "$(field data.requiredGiven)"
+check "trader-status hides the balance" "" "$(field data.balance)"
 call POST /api/donations "$U" "{\"name\":\"Guest Person\",\"zip\":\"$ZIP\",\"puzzles\":[$(P "Smoke C $RUN" 300 Food)]}"
 check "returning donor estimate = count" 1 "$(field data.estimatedCredits)"
 BATCH2=$(field data.batchId)
@@ -118,7 +141,7 @@ check "new trader with 2 puzzles 201" 201 "$STATUS"
 check "tier snapshot new" "new" "$(field data.tier)"
 TRADE=$(field data.tradeId)
 call GET "/api/trader-status?email=$TRADER" ""
-check "credit charged at request (-2)" -2 "$(field data.balance)"
+check "credit charged at request (balance -2 needs 3)" 3 "$(field data.requiredGiven)"
 call GET /api/puzzles ""
 check "wanted puzzle reserved (gone from Explore)" "" "$(echo "$BODY" | grep -o "$WANT")"
 call POST /api/trades "" "{$TRADE_BASE,\"givenPuzzles\":[$(P 'G' 500 Movies),$(P 'G' 500 Movies),$(P 'G' 500 Movies)]}"
@@ -130,9 +153,7 @@ check "complete trade 200" 200 "$STATUS"
 check "received puzzle traded" "traded" "$(curl -s -b "$A" "$BASE/api/admin/puzzles?status=traded" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const p=JSON.parse(s).data.find(p=>p.id===process.argv[1]);console.log(p?p.status:"")})' "$WANT")"
 call GET "/api/trader-status?email=$TRADER" ""
 check "trader now returning (needs 1)" 1 "$(field data.requiredGiven)"
-check "balance 0 after completion (+2 approved, -1 taken)" 0 "$(field data.balance)"
 check "given puzzles approved on completion" 2 "$(curl -s -b "$A" "$BASE/api/admin/trades?status=completed" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s).data.find(t=>t.id===process.argv[1]);console.log(t?t.given.filter(g=>g.status==="available").length:"")})' "$TRADE")"
-check "puzzlesAdded counted" 2 "$(field data.puzzlesAdded)"
 call POST /api/trades "" "{\"name\":\"Trader\",\"zip\":\"$ZIP\",\"email\":\"$TRADER\",\"wantedPuzzleId\":\"$WANT\",\"dropoffDate\":\"2099-01-05\",\"dropoffSlot\":\"10:00\",\"givenPuzzles\":[$(P G 500 Movies),$(P G 500 Movies)]}"
 check "returning trader with 2 puzzles 400" 400 "$STATUS"
 call GET /api/puzzles ""
@@ -143,7 +164,7 @@ TRADE2=$(field data.tradeId)
 call POST "/api/admin/trades/$TRADE2" "$A" '{"action":"cancel"}'
 check "cancel trade 200" 200 "$STATUS"
 call GET "/api/trader-status?email=$TRADER" ""
-check "refund on cancel (back to 0)" 0 "$(field data.balance)"
+check "refund on cancel (back to 0, needs 1)" 1 "$(field data.requiredGiven)"
 call GET /api/puzzles ""
 check "cancelled trade releases puzzle" "$WANT2" "$(echo "$BODY" | grep -o "$WANT2" | head -1)"
 check "given puzzle rejected on cancel" "rejected" "$(echo "$BODY" >/dev/null; curl -s -b "$A" "$BASE/api/admin/trades?status=cancelled" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s).data.find(t=>t.id===process.argv[1]);console.log(t?t.given[0].status:"")})' "$TRADE2")"

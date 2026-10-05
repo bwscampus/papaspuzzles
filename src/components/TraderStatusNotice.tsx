@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, errorMessage } from '@/lib/client/api';
 import { isEmail, normalizeEmail } from '@/lib/constants';
-import type { TraderStatus } from '@/lib/types';
+import type { TraderRequirement } from '@/lib/types';
 import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
 
 export type TraderLookup =
     | { state: 'idle' }
     | { state: 'loading'; email: string }
-    | { state: 'ok'; email: string; status: TraderStatus }
+    | { state: 'ok'; email: string; status: TraderRequirement }
     | { state: 'error'; email: string; message: string };
 
 /**
@@ -48,7 +48,7 @@ export function TraderStatusNotice({
 
         let cancelled = false;
         const timer = setTimeout(() => {
-            api.get<TraderStatus>(`/api/trader-status?email=${encodeURIComponent(normalized)}`)
+            api.get<TraderRequirement>(`/api/trader-status?email=${encodeURIComponent(normalized)}`)
                 .then((status) => {
                     if (!cancelled) update({ state: 'ok', email: normalized, status });
                 })

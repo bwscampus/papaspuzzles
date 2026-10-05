@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { handle, ok, readJson } from '@/lib/api';
+import { appOrigin } from '@/lib/appUrl';
 import { query, queryOne } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import { clientIp, rateLimit } from '@/lib/rateLimit';
@@ -9,13 +10,6 @@ import { validateEmail } from '@/lib/validate';
 export const dynamic = 'force-dynamic';
 
 const TOKEN_TTL_MINUTES = 60;
-
-/** Reset links only ever point at APP_URL; a request's Host header is never trusted for this. */
-function appOrigin(request: Request): string {
-    if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, '');
-    if (process.env.NODE_ENV !== 'production') return new URL(request.url).origin;
-    throw new Error('APP_URL must be set in production.');
-}
 
 export const POST = handle('auth/forgot-password', async (request) => {
     rateLimit(`forgot:${clientIp(request)}`, 5, 60 * 60 * 1000);

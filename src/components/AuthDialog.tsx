@@ -64,7 +64,7 @@ export function AuthDialog() {
                 toast.success('Welcome back!');
             } else if (mode === 'signup') {
                 await signUp(email, password, name);
-                toast.success('Your account is ready.');
+                toast.success('Your account is ready. Check your email for a link to confirm your address.');
             } else {
                 await requestPasswordReset(email);
                 toast.info('If that email has an account, a reset link is on its way.');

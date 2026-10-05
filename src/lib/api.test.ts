@@ -8,6 +8,7 @@ describe('ApiError', () => {
         expect(new ApiError('forbidden', 'x').status).toBe(403);
         expect(new ApiError('not_found', 'x').status).toBe(404);
         expect(new ApiError('conflict', 'x').status).toBe(409);
+        expect(new ApiError('rate_limited', 'x').status).toBe(429);
     });
 });
 

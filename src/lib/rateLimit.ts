@@ -30,15 +30,21 @@ export function rateLimit(key: string, limit: number, windowMs: number): void {
 
     if (bucket.tokens < 1) {
         buckets.set(key, bucket);
-        throw new ApiError('validation', 'Too many attempts. Please wait a moment and try again.');
+        throw new ApiError('rate_limited', 'Too many attempts. Please wait a moment and try again.');
     }
     bucket.tokens -= 1;
     buckets.set(key, bucket);
 }
 
+/**
+ * Railway's edge overwrites X-Real-IP on every request, so it is the one client-IP header a
+ * caller cannot forge. X-Forwarded-For is only a fallback for other hosts (local dev).
+ */
 export function clientIp(request: Request): string {
+    const realIp = request.headers.get('x-real-ip')?.trim();
+    if (realIp) return realIp;
     const forwarded = request.headers.get('x-forwarded-for');
-    return forwarded?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
+    return forwarded?.split(',')[0]?.trim() || 'unknown';
 }
 
 /** Test helper. */

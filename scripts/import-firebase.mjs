@@ -41,8 +41,9 @@ const limit = args.limit === undefined ? Infinity : Number(args.limit);
 if (args.limit !== undefined && (!Number.isInteger(limit) || limit < 1))
     fail('--limit must be a positive integer.');
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) fail('DATABASE_URL is not set.');
+// Admin script: connect as the owner, like migrations do.
+const connectionString = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
+if (!connectionString) fail('MIGRATION_DATABASE_URL (or DATABASE_URL) is not set.');
 const uploadDir = process.env.UPLOAD_DIR;
 if ((args.apply || args.undo) && !uploadDir) {
     fail('UPLOAD_DIR must be set explicitly for --apply/--undo (on Railway: /data/uploads).');
