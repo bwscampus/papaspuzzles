@@ -32,7 +32,7 @@ import {
     normalizeEmail,
     normalizeZip,
 } from '@/lib/constants';
-import type { PublicPuzzle, TraderStatus } from '@/lib/types';
+import type { PublicPuzzle, TraderRequirement } from '@/lib/types';
 
 const STEPS = ['Your info', 'Your puzzles', 'Pick & drop-off'] as const;
 
@@ -70,7 +70,7 @@ function TradeWizard() {
     }, [user]);
 
     // The status only counts when it belongs to the email currently in the field.
-    const status: TraderStatus | null =
+    const status: TraderRequirement | null =
         lookup.state === 'ok' && lookup.email === normalizeEmail(email) ? lookup.status : null;
     const requiredGiven = status?.requiredGiven ?? null;
 
@@ -105,7 +105,7 @@ function TradeWizard() {
     const refreshStatus = useCallback(async () => {
         const normalized = normalizeEmail(email);
         try {
-            const fresh = await api.get<TraderStatus>(
+            const fresh = await api.get<TraderRequirement>(
                 `/api/trader-status?email=${encodeURIComponent(normalized)}`
             );
             setLookup({ state: 'ok', email: normalized, status: fresh });
@@ -301,7 +301,7 @@ function TradeWizard() {
                 <form onSubmit={goToPick} noValidate className="flex flex-col gap-6">
                     <Alert tone="info">
                         {requiredGiven !== null && requiredGiven > 1
-                            ? `Your balance is ${status?.balance ?? -1}, so tell us about the ${requiredGiven} puzzles you are giving.`
+                            ? `This trade needs ${requiredGiven} puzzles from you, so tell us about each one.`
                             : 'Tell us about the puzzle you are giving.'}
                     </Alert>
                     {countNotice && (

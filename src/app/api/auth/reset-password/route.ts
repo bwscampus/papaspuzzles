@@ -1,5 +1,5 @@
 import { handle, ok, readJson, validationError } from '@/lib/api';
-import { toUser, type UserRow } from '@/lib/auth';
+import { toUser, USER_COLUMNS, type UserRow } from '@/lib/auth';
 import { queryOne, withTransaction } from '@/lib/db';
 import { createSession, hashPassword, sha256 } from '@/lib/session';
 import { validatePassword } from '@/lib/validate';
@@ -27,10 +27,12 @@ export const POST = handle('auth/reset-password', async (request) => {
 
     const passwordHash = await hashPassword(password);
     const user = await withTransaction(async (client) => {
-        // Bumping session_version signs out every other device.
+        // Bumping session_version signs out every other device. The reset link reached this
+        // inbox, which also proves ownership of the email.
         const { rows } = await client.query<UserRow>(
-            `update users set password_hash = $1, session_version = session_version + 1
-             where id = $2 returning id, email, display_name, session_version`,
+            `update users set password_hash = $1, session_version = session_version + 1,
+                    email_verified_at = coalesce(email_verified_at, now())
+             where id = $2 returning ${USER_COLUMNS}`,
             [passwordHash, record.user_id]
         );
         await client.query('update password_reset_tokens set used_at = now() where token_hash = $1', [

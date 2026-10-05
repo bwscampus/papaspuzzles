@@ -25,11 +25,12 @@ npm run dev                             # http://localhost:3000
 | ---------------- | ---------------------------------------------------------------------------------------- |
 | `DATABASE_URL`   | Postgres connection string                                                               |
 | `SESSION_SECRET` | Long random string for signing login cookies (`openssl rand -hex 32`)                    |
-| `ADMIN_EMAILS`   | Comma-separated emails whose accounts can open `/admin`                                  |
+| `ADMIN_EMAILS`   | Comma-separated emails whose accounts can open `/admin` once the email is **verified**   |
 | `UPLOAD_DIR`     | Directory for uploaded photos (default `./uploads`)                                      |
 | `APP_URL`        | Public URL used in password-reset emails (required in production)                        |
-| `RESEND_API_KEY` | Optional. Without it, reset links are printed to the server log instead of emailed       |
-| `EMAIL_FROM`     | Optional sender for reset emails                                                         |
+| `RESEND_API_KEY` | Required in production (reset + verification emails). Locally, emails are suppressed     |
+| `EMAIL_DEV_LOG`  | Local only: `1` prints suppressed emails (with links) to the server log                  |
+| `EMAIL_FROM`     | Optional sender for reset and verification emails                                        |
 | `DATABASE_SSL`   | Optional `true`/`false` override. Defaults to off for `*.railway.internal` and localhost |
 
 ### Commands
@@ -43,8 +44,10 @@ npm run dev                             # http://localhost:3000
 | `scripts/smoke.sh` | End-to-end API test against a running app (see below)     |
 
 ```bash
-# End-to-end smoke test (creates throwaway accounts; ADMIN_EMAIL must be in ADMIN_EMAILS)
-BASE=http://localhost:3000 ADMIN_EMAIL=founder@example.com scripts/smoke.sh
+# End-to-end smoke test (local/staging only; creates throwaway accounts; ADMIN_EMAIL must be in
+# ADMIN_EMAILS). DATABASE_URL lets it mark test emails verified, since it can't click inbox links.
+BASE=http://localhost:3000 ADMIN_EMAIL=founder@example.com ADMIN_PASSWORD=choose-one \
+  DATABASE_URL=postgresql://postgres:pp@localhost:5433/papaspuzzles scripts/smoke.sh
 ```
 
 ## How it works
@@ -93,7 +96,8 @@ The app service builds with Railpack and starts with `npm run start`, which runs
 - Postgres service, referenced by the app as `DATABASE_URL=${{Postgres.DATABASE_URL}}`
 - A volume mounted at `/data` with `UPLOAD_DIR=/data/uploads`
 - `SESSION_SECRET`, `ADMIN_EMAILS`, `APP_URL` (the public domain)
-- `RESEND_API_KEY` + `EMAIL_FROM` once an email provider is set up
+- `RESEND_API_KEY` + `EMAIL_FROM`: required. Without them signup can't send verification links, so
+  nobody (admins included) can unlock credits or `/admin`, and the server logs a CONFIG ERROR at startup
 
 **Backups:** Railway snapshots the Postgres volume. For a manual export, use the Postgres service's public URL:
 `pg_dump "$DATABASE_PUBLIC_URL" > backup.sql`. Uploaded photos live on the app volume.
@@ -111,4 +115,4 @@ railway ssh --service papaspuzzles -- node scripts/import-firebase.mjs --undo   
 Imported puzzles are admin inventory with photos at `/uploads/firebase-<id>.<ext>`; that prefix is how
 re-runs skip done records and how `--undo` finds them. Locally, prefix with `node --env-file=.env.local`.
 
-**Admin access:** sign up normally with an email listed in `ADMIN_EMAILS`; the Admin link appears in the nav.
+**Admin access:** sign up normally with an email listed in `ADMIN_EMAILS` and confirm it via the emailed link; the Admin link appears in the nav once verified.
