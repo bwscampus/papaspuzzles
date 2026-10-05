@@ -1,18 +1,10 @@
 -- Papa's Puzzles schema. See docs/technical-design.md §6.
 --
--- This migration replaces the pre-rebuild schema. The preamble drops the old
--- objects so it applies cleanly on the existing database (test data only) and
--- on a fresh one.
-
-drop function if exists public.increment_user_counters(text, integer, integer, integer, text, text);
-drop function if exists public.accept_donation_batch(text, text, text);
-drop function if exists public.redeem_puzzles(text, text, uuid[]);
-drop table if exists public.redemptions cascade;
-drop table if exists public.trades cascade;
-drop table if exists public.requests cascade;
-drop table if exists public.donations cascade;
-drop table if exists public.password_reset_tokens cascade;
-drop table if exists public.users cascade;
+-- This migration originally began with `drop table … cascade` statements that cleared the
+-- pre-rebuild test schema. They were removed (rule DB-2): scripts/migrate.mjs records applied
+-- migrations by filename only, so this file never re-runs on an existing database, and a
+-- destructive preamble in the first migration would wipe real data if schema_migrations were
+-- ever lost.
 
 -- ---------------------------------------------------------------------------
 -- Accounts

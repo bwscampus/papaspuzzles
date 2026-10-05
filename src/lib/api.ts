@@ -7,6 +7,7 @@ const STATUS_FOR_CODE: Record<ApiErrorCode, number> = {
     forbidden: 403,
     not_found: 404,
     conflict: 409,
+    unsupported_media_type: 415,
     rate_limited: 429,
     internal: 500,
 };
@@ -71,10 +72,43 @@ export function toErrorBody(error: unknown): ApiErrorBody {
 
 type Handler<Ctx> = (request: Request, ctx: Ctx) => Promise<NextResponse>;
 
+const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+function hostOf(url: string | null | undefined): string | null {
+    if (!url) return null;
+    try {
+        return new URL(url).host.toLowerCase();
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * CSRF defence in depth (rule API-6), on top of the SameSite=Lax session cookie.
+ * Browsers always send `Origin` on cross-site POST/PUT/PATCH/DELETE, so a state-changing
+ * request whose Origin is another site is rejected. Requests without an Origin header
+ * (curl, server-to-server) are allowed: they carry no ambient browser cookies.
+ */
+export function isSameOriginRequest(request: Request, appUrl = process.env.APP_URL): boolean {
+    if (!UNSAFE_METHODS.has(request.method.toUpperCase())) return true;
+    const origin = request.headers.get('origin');
+    if (origin === null) return true;
+    const originHost = hostOf(origin);
+    if (!originHost) return false; // includes the opaque "null" origin
+    const allowed = new Set<string>();
+    const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+    if (forwardedHost) allowed.add(forwardedHost.split(',')[0].trim().toLowerCase());
+    for (const host of [hostOf(request.url), hostOf(appUrl)]) if (host) allowed.add(host);
+    return allowed.has(originHost);
+}
+
 /** Wraps a route handler so every error becomes the standard envelope. */
 export function handle<Ctx = unknown>(name: string, fn: Handler<Ctx>): Handler<Ctx> {
     return async (request, ctx) => {
         try {
+            if (!isSameOriginRequest(request)) {
+                throw forbidden('Cross-site requests are not allowed.');
+            }
             return await fn(request, ctx);
         } catch (error) {
             const body = toErrorBody(error);
@@ -86,10 +120,20 @@ export function handle<Ctx = unknown>(name: string, fn: Handler<Ctx>): Handler<C
     };
 }
 
-/** Parses a JSON body, returning {} for empty or malformed input. */
+/**
+ * Parses a JSON body, returning {} for an empty or malformed body.
+ * A non-empty body must be sent as `application/json` (rule API-6): HTML forms can only
+ * POST form-encoded or text/plain bodies cross-site, so this shuts out form-based CSRF.
+ */
 export async function readJson(request: Request): Promise<Record<string, unknown>> {
+    const text = await request.text().catch(() => '');
+    if (!text.trim()) return {};
+    const type = (request.headers.get('content-type') ?? '').trim().toLowerCase();
+    if (!/^application\/json(\s*;|$)/.test(type)) {
+        throw new ApiError('unsupported_media_type', 'Requests must be sent as JSON.');
+    }
     try {
-        const body = await request.json();
+        const body: unknown = JSON.parse(text);
         return body && typeof body === 'object' && !Array.isArray(body)
             ? (body as Record<string, unknown>)
             : {};

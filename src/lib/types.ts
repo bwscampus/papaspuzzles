@@ -163,7 +163,14 @@ export interface History {
 }
 
 export type ApiErrorCode =
-    'validation' | 'unauthorized' | 'forbidden' | 'not_found' | 'conflict' | 'rate_limited' | 'internal';
+    | 'validation'
+    | 'unauthorized'
+    | 'forbidden'
+    | 'not_found'
+    | 'conflict'
+    | 'unsupported_media_type'
+    | 'rate_limited'
+    | 'internal';
 
 export interface ApiErrorBody {
     code: ApiErrorCode;
