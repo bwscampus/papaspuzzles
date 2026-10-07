@@ -113,7 +113,7 @@ Uploaded photos live on the app volume and are not covered by the database backu
 also creates the login `app_rw_login` in that group and re-applies its password on every deploy.
 The app should connect as `app_rw_login` so a bug or injection can't drop tables or touch roles.
 
-Cut-over, per environment (do `staging` first, then `production`), after this code is deployed:
+Cut-over on the production environment (the only Railway environment; staging was removed 2026-10-07 as unused), after this code is deployed:
 
 1. App service → Variables: add `APP_DB_PASSWORD` (random, e.g. `openssl rand -hex 24`) and **seal** it.
 2. Add `MIGRATION_DATABASE_URL=${{Postgres.DATABASE_URL}}` (the owner, for migrations).
