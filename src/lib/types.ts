@@ -30,8 +30,6 @@ export interface User {
     id: string;
     email: string;
     displayName: string | null;
-    /** Credits, history, and admin rights stay locked until the email is verified. */
-    emailVerified: boolean;
     isAdmin: boolean;
 }
 

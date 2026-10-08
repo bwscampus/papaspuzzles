@@ -3,15 +3,13 @@
 # Usage: BASE=http://localhost:3000 ADMIN_EMAIL=founder@example.com ADMIN_PASSWORD=... \
 #        DATABASE_URL=postgres://... scripts/smoke.sh
 # Requires: curl, node. Creates throwaway accounts with random emails; safe to run repeatedly.
-# Local/staging only: DATABASE_URL is used to mark the test accounts' emails verified, because the
-# smoke test can't click a link in an inbox. Never point it at production.
+# Local only: creates accounts and data. Never point it at production.
 set -u
 
 BASE=${BASE:-http://localhost:3000}
 ADMIN_EMAIL=${ADMIN_EMAIL:?set ADMIN_EMAIL to an address listed in ADMIN_EMAILS}
 # No default: a password committed here would be a known admin password on any server it ran against.
 ADMIN_PASSWORD=${ADMIN_PASSWORD:?set ADMIN_PASSWORD (the admin account is created with it if missing)}
-: "${DATABASE_URL:?set DATABASE_URL to the same database the server uses}"
 RUN=$(date +%s)$RANDOM
 # A ZIP inside the service area (SERVICE_ZIPS in src/lib/constants.ts) and one outside it.
 ZIP=${SMOKE_ZIP:-90049}
@@ -33,32 +31,20 @@ check() { # check "label" "expected" "actual"
     if [ "$2" = "$3" ]; then PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; else FAIL=$((FAIL+1)); printf '  FAIL %s (expected %s, got %s)\n' "$1" "$2" "$3"; fi
 }
 field() { echo "$BODY" | json "$1"; }
-# Marks an account's email verified directly in the database (stands in for clicking the emailed link).
-verify_email() {
-    node -e 'const {Client}=require("pg");(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();await c.query("update users set email_verified_at = coalesce(email_verified_at, now()) where lower(email) = lower($1)",[process.argv[1]]);await c.end()})().catch(e=>{console.error(e.message);process.exit(1)})' "$1"
-}
-
 echo "== accounts"
 A=$TMP/admin.jar; U=$TMP/user.jar
 GUEST="guest-$RUN@example.com"; TRADER="trader-$RUN@example.com"
 call POST /api/auth/signup "$A" "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}"
-[ "$STATUS" = 201 ] && check "unverified admin email is not admin" "false" "$(field data.user.isAdmin)"
-verify_email "$ADMIN_EMAIL"
+[ "$STATUS" = 201 ] && check "listed admin email is admin at signup" "true" "$(field data.user.isAdmin)"
 call POST /api/auth/signin "$A" "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}"
 check "admin signed in" "true" "$(field data.user.isAdmin)"
 call POST /api/auth/signup "$U" "{\"email\":\"$GUEST\",\"password\":\"smoke-pass-1\",\"name\":\"Guest Person\"}"
 check "user signup 201" 201 "$STATUS"
 check "user is not admin" "false" "$(field data.user.isAdmin)"
-check "new account is unverified" "false" "$(field data.user.emailVerified)"
 call GET /api/me/history "$U"
-check "history locked until verified 403" 403 "$STATUS"
+check "history available to a signed-in user 200" 200 "$STATUS"
 call GET /api/me/credits "$U"
-check "credits locked until verified 403" 403 "$STATUS"
-call POST /api/auth/verify-email "" '{"token":"not-a-real-token"}'
-check "bogus verification token 400" 400 "$STATUS"
-verify_email "$GUEST"
-call GET /api/me/history "$U"
-check "history unlocked after verification 200" 200 "$STATUS"
+check "credits available to a signed-in user 200" 200 "$STATUS"
 call POST /api/auth/signup "" "{\"email\":\"$GUEST\",\"password\":\"smoke-pass-1\"}"
 check "duplicate signup 409" 409 "$STATUS"
 call POST /api/auth/signin "" "{\"email\":\"$GUEST\",\"password\":\"wrong\"}"

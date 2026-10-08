@@ -5,7 +5,6 @@ import { ArrowRight } from 'lucide-react';
 import { PageShell } from '@/components/PageShell';
 import { SignInGate } from '@/components/SignInGate';
 import { StatusBadge } from '@/components/StatusBadge';
-import { VerifyEmailNotice } from '@/components/VerifyEmailNotice';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -26,13 +25,12 @@ function HistoryInner() {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        if (!user?.emailVerified) return;
+        if (!user) return;
         api.get<History>('/api/me/history')
             .then(setHistory)
             .catch((err) => setError(errorMessage(err)));
     }, [user]);
 
-    if (user && !user.emailVerified) return <VerifyEmailNotice />;
     if (error) return <Alert tone="error">{error}</Alert>;
     if (!history) {
         return (
