@@ -46,7 +46,7 @@ could have registered someone else's email, so a backfill would make any existin
 
 Every existing user, **including founders and admins**, verifies once:
 
-- by clicking the link they get from "Resend the link" on My Trades, or
+- by clicking the link they get from "Send me the link" on My Trades, or
 - by completing a password reset, which also marks the email verified because the reset link
   went to the same inbox.
 
@@ -96,7 +96,7 @@ Not in this round (still open below): auth-required uploads and orphan cleanup (
 | Rule   | Where                             | Action                                                                                                                                                                                                       |
 | ------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | AUTH-2 | Railway → app → Variables         | **Set `RESEND_API_KEY` and `EMAIL_FROM` before deploying this branch.** Without them, verification emails can't be sent, so nobody can unlock credits or `/admin`, and the startup log shows `CONFIG ERROR`. |
-| AUTH-8 | Founders                          | After deploy, each admin signs in, clicks "Resend the link" on My Trades and verifies. Or they use "Forgot password", which also verifies.                                                                   |
+| AUTH-8 | Founders                          | After deploy, each admin signs in, clicks "Send me the link" on My Trades and verifies. Or they use "Forgot password", which also verifies.                                                                  |
 | DB-4   | Railway → app → Variables         | Keep `DATABASE_URL` on the **private** host (`*.railway.internal`). Checked Oct 2026: production Postgres has no public URL at all; leave the public TCP proxy off.                                          |
 | DB-5   | Railway → Postgres → Backups      | ✅ Done Oct 5 2026: daily + weekly snapshots and point-in-time recovery enabled on production. Still to do: one practice restore into a scratch database.                                                    |
 | DB-6   | Railway → app → Variables         | After `security/db-hardening` is merged and deployed: do the least-privilege cut-over in the README (sealed `APP_DB_PASSWORD`, `MIGRATION_DATABASE_URL`, then point `DATABASE_URL` at `app_rw_login`).       |

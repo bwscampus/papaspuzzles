@@ -29,11 +29,14 @@ export function VerifyEmailNotice() {
     return (
         <Alert tone="warn" title="Confirm your email to see your credits and trades">
             <p>
-                We sent a link to <strong>{user.email}</strong>. Your history and credits are tied to that
-                address, so they unlock once you confirm it&apos;s yours.
+                Your history and credits are tied to <strong>{user.email}</strong>, so they unlock once you
+                confirm it&apos;s yours. Press the button and we&apos;ll email a confirmation link to that
+                address (new accounts get one at sign-up; check spam if it hasn&apos;t arrived).
             </p>
             {state === 'sent' ? (
-                <p className="mt-2">A new link is on its way. Check your inbox and spam folder.</p>
+                <p className="mt-2">
+                    Link sent. Check your inbox and spam folder; it works once and expires in 24 hours.
+                </p>
             ) : (
                 <Button
                     size="sm"
@@ -42,7 +45,7 @@ export function VerifyEmailNotice() {
                     loading={state === 'sending'}
                     onClick={resend}
                 >
-                    Resend the link
+                    Send me the link
                 </Button>
             )}
             {error && <p className="mt-2">{error}</p>}
