@@ -72,7 +72,7 @@ try {
             email,
         ]);
         expect(true, 'insert users');
-        await app.query('update users set display_name = $2 where id = $1', [user.id, 'probe']);
+        await app.query('update users set email_verified_at = now() where id = $1', [user.id]);
         expect(true, 'update users');
         await app.query(
             `insert into credit_entries (email, delta, reason) values ($1, 2, 'admin_adjustment')`,
@@ -103,6 +103,12 @@ try {
         );
         await app.query('delete from waitlist where email = $1', [email]);
         expect(true, 'insert/delete waitlist');
+        await app.query(
+            `insert into email_verification_tokens (token_hash, user_id, expires_at)
+             values ($1, $2, now() + interval '1 hour')`,
+            [`probe-${Date.now()}`, user.id]
+        );
+        expect(true, 'insert email_verification_tokens');
     } catch (err) {
         expect(false, '', `runtime query failed: ${err.code} ${err.message}`);
     }

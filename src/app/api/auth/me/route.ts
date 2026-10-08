@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export const GET = handle('auth/me', async () => {
     const user = await getCurrentUser();
-    const balance = user ? await getCreditBalance(user.email) : null;
+    // The balance belongs to whoever owns the inbox, so it stays hidden until the email is verified.
+    const balance = user?.emailVerified ? await getCreditBalance(user.email) : null;
     return ok({ user, balance });
 });

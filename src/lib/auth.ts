@@ -29,22 +29,24 @@ export interface UserRow {
     email: string;
     display_name: string | null;
     session_version: number;
+    email_verified_at: Date | string | null;
 }
 
 /** Columns every query that builds a UserRow must select or return. */
-export const USER_COLUMNS = 'id, email, display_name, session_version';
+export const USER_COLUMNS = 'id, email, display_name, session_version, email_verified_at';
 
 /**
- * Admin is computed from the listed email on every request, never stored. Email ownership is not
- * verified (removed 2026-10-08; see docs/SECURITY-GAPS.md, AUTH-2 / AUTH-8), so the admin addresses
- * must already have accounts: the unique email index stops anyone else registering them.
+ * Admin requires a listed email *and* proof the account holder owns it. Without the second half,
+ * anyone could register an ADMIN_EMAILS address before its owner does and get full admin access.
  */
 export function toUser(row: UserRow): User {
+    const emailVerified = row.email_verified_at !== null && row.email_verified_at !== undefined;
     return {
         id: row.id,
         email: row.email,
         displayName: row.display_name,
-        isAdmin: isAdminEmail(row.email),
+        emailVerified,
+        isAdmin: emailVerified && isAdminEmail(row.email),
     };
 }
 
@@ -64,6 +66,17 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function requireUser(): Promise<User> {
     const user = await getCurrentUser();
     if (!user) throw unauthorized();
+    return user;
+}
+
+/** Signed in with a verified email: required for anything that reads or spends the email's credits. */
+export async function requireVerifiedUser(): Promise<User> {
+    const user = await requireUser();
+    if (!user.emailVerified) {
+        throw forbidden(
+            'Please verify your email address first. Check your inbox for the link, or resend it from My Trades.'
+        );
+    }
     return user;
 }
 

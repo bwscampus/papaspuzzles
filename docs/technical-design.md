@@ -46,7 +46,7 @@ The founder's original text (mission, values, story, phrase, quote, contact) is 
 - **Use Your Credits**: signed in only. Pick up to `balance` available puzzles. Atomically: puzzles → `reserved`, balance − n, a pickup record created. Admin marks the pickup **fulfilled** (puzzles → `claimed`) or **cancelled** (puzzles → `available`, credits refunded).
 - **Explore**: `available` puzzles with filters Pieces and Theme. Card: photo, pieces badge, name, theme, "Start a Trade".
 - **My Trades**: signed in only. Trades (gave → received, drop-off, status), donations (count, status, credits), credit pickups.
-- **Admin**: an account whose email is listed in the `ADMIN_EMAILS` environment variable (email verification was removed 2026-10-08; see `docs/SECURITY-GAPS.md`). Views: Puzzles (all, status filter, approve/reject/edit/delete; Add Inventory with puzzle fields only), Users, Trades, Donations & credits, Credit pickups.
+- **Admin**: an account whose email is listed in the `ADMIN_EMAILS` environment variable **and verified** (see `docs/SECURITY-GAPS.md`). Views: Puzzles (all, status filter, approve/reject/edit/delete; Add Inventory with puzzle fields only), Users, Trades, Donations & credits, Credit pickups.
 
 ### 3.3 Pages
 
@@ -244,7 +244,7 @@ A missing, malformed, or out-of-area `zip` on `/api/trades` or `/api/donations` 
 
 ## 10. Security
 
-- Admin: `ADMIN_EMAILS` (comma-separated) parsed once; `isAdmin` computed per request from the listed email, never stored (email verification removed 2026-10-08, migration 0010; accepted gap AUTH-2 / AUTH-8); `requireAdmin` on every admin route; `/admin` layout gate.
+- Admin: `ADMIN_EMAILS` (comma-separated) parsed once; `isAdmin` computed per request from listed **and** `email_verified_at` set, never stored; `requireAdmin` on every admin route; `/admin` layout gate.
 - Identity: every mutation derives the user from the session cookie; client-supplied ids are never trusted. Guest submissions carry only name and email.
 - Public reads expose no personal data (`/api/puzzles` projects public columns only). `/api/me/*` are session-only; the old `?email=` lookup is gone.
 - Input: every field validated against the constants; arrays bounded (≤20 puzzles per submission, ≤balance per redemption); ids UUID-checked; `imageUrl` must be a local upload path.
@@ -258,7 +258,7 @@ A missing, malformed, or out-of-area `zip` on `/api/trades` or `/api/donations` 
 
 - Railway project `papaspuzzles`: app service (GitHub `bwscampus/papaspuzzles`, `main`), Postgres service, volume mounted at `/data`.
 - Start command `npm run start` = migrate then `next start`; health check `/`.
-- Environment variables: `DATABASE_URL` (reference to Postgres), `SESSION_SECRET`, `UPLOAD_DIR=/data/uploads`, `APP_URL`, `ADMIN_EMAILS`, `RESEND_API_KEY` (required in production for password-reset emails), `EMAIL_FROM`, optional `DATABASE_SSL`.
+- Environment variables: `DATABASE_URL` (reference to Postgres), `SESSION_SECRET`, `UPLOAD_DIR=/data/uploads`, `APP_URL`, `ADMIN_EMAILS`, `RESEND_API_KEY` (required in production for reset and verification emails), `EMAIL_FROM`, optional `DATABASE_SSL`.
 - Backups: Railway Postgres volume snapshots; uploads live on the app volume. Document a manual `pg_dump` procedure in the README.
 - Logging: structured `console.error` with route name; no secrets in logs.
 - Rollback: redeploy previous Railway deployment; migrations are forward-only, so schema changes are written to be backward compatible after this rebuild.
@@ -294,7 +294,7 @@ Optional, needs explicit approval because it rewrites history and force-pushes: 
 ## 15. Risks and open items
 
 - **Single instance assumptions**: in-memory rate limiting and disk uploads assume one Railway replica. Acceptable now; note for scaling.
-- **Guest email trust**: a guest can submit under someone else's email; consequences are limited to that email's donation credits and history, and admin accepts every batch manually. Email verification (migration 0009) was added on 2026-10-05 and removed on 2026-10-08 (migration 0010) by owner decision; signed-in accounts are not verified either. Accepted gap, see `docs/SECURITY-GAPS.md`.
+- **Guest email trust**: a guest can submit under someone else's email; consequences are limited to that email's donation credits and history, and admin accepts every batch manually. Signed-in accounts must verify their email (migration 0009) before credits, history, or admin unlock; guest submissions remain unverified.
 - **Existing production data**: only test rows; the fresh migration drops them. Confirm before Phase 7.
 - **History rewrite** for the media files is deferred pending approval.
 - **Founder review needed**: the estimated-credits wording on the donate confirmation, and the four drop-off slots.

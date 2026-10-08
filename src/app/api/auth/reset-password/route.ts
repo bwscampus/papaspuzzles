@@ -30,7 +30,8 @@ export const POST = handle('auth/reset-password', async (request) => {
         // Bumping session_version signs out every other device. The reset link reached this
         // inbox, which also proves ownership of the email.
         const { rows } = await client.query<UserRow>(
-            `update users set password_hash = $1, session_version = session_version + 1
+            `update users set password_hash = $1, session_version = session_version + 1,
+                    email_verified_at = coalesce(email_verified_at, now())
              where id = $2 returning ${USER_COLUMNS}`,
             [passwordHash, record.user_id]
         );

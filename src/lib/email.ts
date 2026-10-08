@@ -6,12 +6,12 @@ interface EmailMessage {
 }
 
 /**
- * Production refuses to "send" without a provider: silently dropping reset emails
+ * Production refuses to "send" without a provider: silently dropping reset and verification emails
  * looks like success to the user, and logging them would put live sign-in links in the server log.
  */
 export function emailConfigProblem(): string | null {
     if (process.env.NODE_ENV === 'production' && !process.env.RESEND_API_KEY) {
-        return 'RESEND_API_KEY is not set; password reset cannot work.';
+        return 'RESEND_API_KEY is not set; password reset and email verification cannot work.';
     }
     return null;
 }
