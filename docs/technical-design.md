@@ -262,6 +262,7 @@ A missing, malformed, or out-of-area `zip` on `/api/trades` or `/api/donations` 
 - Backups: Railway Postgres volume snapshots; uploads live on the app volume. Document a manual `pg_dump` procedure in the README.
 - Logging: structured `console.error` with route name; no secrets in logs.
 - Rollback: redeploy previous Railway deployment; migrations are forward-only, so schema changes are written to be backward compatible after this rebuild.
+- Environments: production only. The Railway `staging` environment was deleted on 2026-10-07 (unused, ~$2/month). Pre-production verification is the local smoke suite (`scripts/smoke.sh`) plus CI, which migrates a fresh Postgres on every push. The `staging` branch remains the integration branch that PRs into `main`.
 - Legacy data: the May 2026 Firebase inventory (112 puzzles) was imported once with `scripts/import-firebase.mjs` from `db/seed/firebase-donations.json`; see the README for the dry-run/apply/undo commands.
 
 ## 12. Testing and quality
