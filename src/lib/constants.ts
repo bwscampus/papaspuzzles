@@ -76,8 +76,22 @@ export function isEmail(value: string): boolean {
  * configured and every well-formed ZIP is accepted.
  */
 export const SERVICE_ZIPS: readonly string[] = [
+    // Westwood
+    '90024',
+    // West Los Angeles
+    '90025',
     // Brentwood
     '90049',
+    // Cheviot Hills / Rancho Park
+    '90064',
+    // Mar Vista
+    '90066',
+    // Century City
+    '90067',
+    // West Hollywood
+    '90069',
+    // Bel Air
+    '90077',
     // Beverly Hills
     '90209',
     '90210',
