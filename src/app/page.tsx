@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { Gift, MapPin, Search, Repeat } from 'lucide-react';
+import { Check, Gift, MapPin, Search, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { CHARITY, SERVICE_AREA, SITE, STEPS } from '@/content/site';
+import { CHARITY, EASY, SERVICE_AREA, SITE, STEPS } from '@/content/site';
 
 const STEP_ICONS = [Gift, Search, Repeat];
 
@@ -64,7 +64,18 @@ export default function HomePage() {
             </section>
 
             <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-                <h2 className="text-center text-3xl">How it works</h2>
+                <h2 className="text-center text-3xl">{EASY.title}</h2>
+                <ul className="mt-6 flex flex-wrap justify-center gap-3">
+                    {EASY.perks.map((perk) => (
+                        <li
+                            key={perk}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-ink"
+                        >
+                            <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
+                            {perk}
+                        </li>
+                    ))}
+                </ul>
                 <ol className="mt-10 grid gap-6 sm:grid-cols-3">
                     {STEPS.map((step, i) => {
                         const Icon = STEP_ICONS[i];
@@ -82,6 +93,11 @@ export default function HomePage() {
                         );
                     })}
                 </ol>
+                <div className="mt-10 flex justify-center">
+                    <Button href="/trade" size="lg">
+                        {EASY.cta}
+                    </Button>
+                </div>
             </section>
 
             <section

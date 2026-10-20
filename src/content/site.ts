@@ -48,17 +48,23 @@ export const FAQ = [
 export const STEPS = [
     {
         title: 'Donate',
-        text: 'Tell us about the puzzles you have finished and upload a photo of each one.',
+        text: 'Snap a photo of each puzzle you have finished and tell us its name.',
     },
     {
         title: 'Choose',
-        text: 'Browse Explore and pick the puzzle you want next.',
+        text: 'Browse Explore and tap the puzzle you want next.',
     },
     {
         title: 'Swap',
-        text: 'Drop off your puzzles and take your new one home.',
+        text: 'Drop off your puzzles and take your new one home. That is it!',
     },
 ] as const;
+
+export const EASY = {
+    title: 'Trading is easy',
+    perks: ['Free to trade', 'No account needed', 'Just a photo and a name'],
+    cta: 'Start your first trade',
+} as const;
 
 export const MISSION =
     "At Papa's Puzzles, we strive to develop a joyful trading system where one can trade in used puzzles and receive exciting new ones! Papa's Puzzles is developing a trading marketplace, where used puzzles can be traded to new puzzlers, while also providing various charities the opportunity to expand their supply – hopefully bringing a smile to someone else's face. Not only are puzzles amazing to do, they help build problem-solving skills, stress management, and can bring people together. Papa's Puzzles is here to inspire connection, creativity, and fun — one piece at a time!";
