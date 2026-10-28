@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Nunito } from 'next/font/google';
 import './globals.css';
 import { Footer } from '@/components/Footer';
+import { GoogleAnalytics } from '@/components/GoogleAnalytics';
 import { Navbar } from '@/components/Navbar';
 import { Providers } from '@/components/Providers';
 import { SITE } from '@/content/site';
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                     <div className="flex-1">{children}</div>
                     <Footer />
                 </Providers>
+                <GoogleAnalytics />
             </body>
         </html>
     );
