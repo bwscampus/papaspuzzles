@@ -1,16 +1,22 @@
 const isDev = process.env.NODE_ENV !== 'production';
 
-// Everything the site loads is same-origin: next/font self-hosts the fonts, photos are served from
-// /uploads on this app, and there are no third-party scripts. Next.js injects inline bootstrap
-// scripts, so script-src needs 'unsafe-inline' until a nonce-based policy is added via middleware.
-// Development additionally needs 'unsafe-eval' for React Refresh.
+// Everything the site loads is same-origin (next/font self-hosts the fonts, photos are served from
+// /uploads on this app) except Google Analytics, whose hosts are allowed below as Google documents
+// for GA4. Next.js injects inline bootstrap scripts, so script-src needs 'unsafe-inline' until a
+// nonce-based policy is added via middleware. Development additionally needs 'unsafe-eval' for
+// React Refresh.
+const googleAnalytics = {
+    script: 'https://*.googletagmanager.com',
+    img: 'https://*.google-analytics.com https://*.googletagmanager.com',
+    connect: 'https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com',
+};
 const contentSecurityPolicy = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
+    `script-src 'self' 'unsafe-inline' ${googleAnalytics.script}${isDev ? " 'unsafe-eval'" : ''}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    `img-src 'self' data: blob: ${googleAnalytics.img}`,
     "font-src 'self'",
-    "connect-src 'self'",
+    `connect-src 'self' ${googleAnalytics.connect}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
