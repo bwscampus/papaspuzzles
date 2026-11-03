@@ -109,6 +109,24 @@ export default function AdminPuzzlesPage() {
                                     Review in {p.source === 'trade' ? 'Trades' : 'Donations'}
                                 </a>
                             )}
+                            {p.status === 'available' && (
+                                <ConfirmButton
+                                    label="Mark donated"
+                                    confirmLabel="Mark donated"
+                                    variant="secondary"
+                                    busy={busy}
+                                    onConfirm={() =>
+                                        run(
+                                            p.id,
+                                            () =>
+                                                api.post(`/api/admin/puzzles/${p.id}/donated`, {
+                                                    donated: true,
+                                                }),
+                                            'Moved to Donated Puzzles.'
+                                        )
+                                    }
+                                />
+                            )}
                             {!locked && (
                                 <>
                                     <Button
