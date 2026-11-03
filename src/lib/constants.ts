@@ -29,6 +29,7 @@ export const PUZZLE_STATUSES = [
     'traded',
     'claimed',
     'rejected',
+    'donated',
 ] as const;
 export const PUZZLE_STATUS_LABELS: Record<(typeof PUZZLE_STATUSES)[number], string> = {
     pending_review: 'Pending review',
@@ -37,6 +38,7 @@ export const PUZZLE_STATUS_LABELS: Record<(typeof PUZZLE_STATUSES)[number], stri
     traded: 'Traded',
     claimed: 'Claimed',
     rejected: 'Rejected',
+    donated: 'Donated',
 };
 
 export const PUZZLE_SOURCES = ['donation', 'trade', 'admin'] as const;

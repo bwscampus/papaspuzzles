@@ -12,6 +12,7 @@ const TONE: Record<string, 'success' | 'warn' | 'danger' | 'neutral' | 'accent' 
     reserved: 'accent',
     traded: 'rose',
     claimed: 'rose',
+    donated: 'neutral',
     cancelled: 'danger',
     rejected: 'danger',
 };

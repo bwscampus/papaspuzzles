@@ -140,6 +140,23 @@ export async function adminUpdate(id: string, patch: Partial<PuzzleInput>): Prom
     });
 }
 
+/**
+ * Moves a puzzle given to our charity partner off Explore, or puts it back. Only available
+ * puzzles can be marked donated, so nothing reserved for a trade or pickup is pulled.
+ */
+export async function adminSetDonated(id: string, donated: boolean): Promise<AdminPuzzle> {
+    const [from, to] = donated ? ['available', 'donated'] : ['donated', 'available'];
+    const row = await queryOne<PuzzleRow>(
+        `update puzzles set status = $3 where id = $1 and status = $2 returning ${PUZZLE_COLUMNS}`,
+        [id, from, to]
+    );
+    if (row) return toAdminPuzzle(row);
+    await adminGet(id);
+    throw conflict(
+        donated ? 'Only available puzzles can be marked donated.' : 'This puzzle is not in the donated list.'
+    );
+}
+
 export async function adminDelete(id: string): Promise<void> {
     await withTransaction(async (client) => {
         const current = await queryOne<PuzzleRow>(
